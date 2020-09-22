@@ -3,3 +3,5 @@ package/
 bin/
 obj/
 node_modules/
+
+*.db
