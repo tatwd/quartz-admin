@@ -12,10 +12,13 @@ import {
   Form,
   FormGroup,
   Input,
+  InputGroup,
+  Label,
   Modal,
   ModalBody,
   ModalFooter,
   ModalHeader,
+  Table,
 } from "reactstrap";
 
 const DashboardContext = React.createContext({});
@@ -29,99 +32,187 @@ export function Dashboard() {
   });
   const alertRef = useRef(null);
 
-  const myContext = {
-    show,
-    toggleShow: () => setShow(!show),
-    job,
-    updateJob: (key, val) => {
-      var newJob = job;
-      newJob[key] = val;
-      console.log(newJob);
-      setJob(newJob);
-    },
-  };
-
   return (
-    <DashboardContext.Provider value={myContext}>
-      {/* <EditPannal /> */}
-      {/* <JobTab /> */}
+    <div>
+      <Button color="info" onClick={() => alertRef.current.toggleShow()}>
+        New Job
+      </Button>
+      <JobsTable
+        onEdit={(item) => {
+          console.log(item);
+          alertRef.current.setState({
+            setting: item,
+          });
+          alertRef.current.toggleShow();
+        }}
+      />
       <MyAlertModal ref={alertRef} />
-      <Button onClick={() => alertRef.current.toggleShow()}>New Job</Button>
-    </DashboardContext.Provider>
+    </div>
   );
 }
 
-function EditPannal() {
-  const { show, toggleShow, job, updateJob } = useContext(DashboardContext);
-  const toggleChange = (event) => {
-    updateJob(event.target.name, event.target.value);
-  };
-  return show ? (
-    <Form>
-      <FormGroup>
-        <Input value={job.jobName} name="jobName" onChange={toggleChange} />
-      </FormGroup>
-      <FormGroup>
-        <Input value={job.jobGroup} name="jobGroup" onChange={toggleChange} />
-      </FormGroup>
-      <Button onClick={toggleShow}>toggleShow</Button>
-    </Form>
-  ) : (
-    ""
-  );
-}
+const testData = [
+  {
+    id: 1,
+    jobName: "job1",
+    jobGroup: "group1",
+    jobDesc: "desc1",
+    selected: false,
+  },
+  {
+    id: 2,
+    jobName: "job2",
+    jobGroup: "group2",
+    jobDesc: "desc2",
+    selected: false,
+  },
+  {
+    id: 3,
+    jobName: "job3",
+    jobGroup: "group3",
+    jobDesc: "desc3",
+    selected: false,
+  },
+  {
+    id: 4,
+    jobName: "job4",
+    jobGroup: "group4",
+    jobDesc: "desc4",
+    selected: false,
+  },
+];
 
-function JobTab() {
-  const { toggleShow, updateJob } = useContext(DashboardContext);
+function JobsTable(props) {
   const [loading, setLoading] = useState(true);
-  const [jobs, setJobs] = useState([1]);
+  const [jobs, setJobs] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
 
   useEffect(() => {
     setTimeout(() => {
-      console.log("fired");
-      setJobs([1, 2, 3, 4]);
+      // TODO: fetch jobs from api
+      setJobs(testData);
       setLoading(false);
     }, 1000);
   }, []);
 
   return (
-    <div>
-      <Button color="primary" onClick={toggleShow}>
-        toggleShow
-      </Button>
+    <div className="mt-3">
       {loading ? (
-        <p>
-          <i>Loading ...</i>
-        </p>
+        <i>Loading ...</i>
+      ) : jobs.length ? (
+        <Table striped responsive>
+          <thead>
+            <tr>
+              <th className="">
+                <FormGroup check>
+                  <Label check>
+                    <Input
+                      type="checkbox"
+                      id="selectAll"
+                      checked={selectAll}
+                      onChange={(event) => {
+                        setSelectAll(!selectAll);
+
+                        // FIXME: select all toggle stuff
+                        setJobs(
+                          jobs.map((i) => {
+                            i.selected = event.target.checked;
+                            return i;
+                          })
+                        );
+                      }}
+                    />
+                    All
+                  </Label>
+                </FormGroup>
+              </th>
+              <th>Job Name</th>
+              <th>Job Group</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {jobs.map((item, idx) => (
+              <tr key={idx}>
+                <th scope="row">
+                  <FormGroup check>
+                    <Label check>
+                      <Input
+                        type="checkbox"
+                        id={"item" + item.id}
+                        checked={item.selected}
+                        onChange={(event) => {
+                          // FIXME: toggle item checked state
+                          // const newItems = jobs;
+                          // console.log(event.target.checked);
+                          // newItems[idx].selected = event.target.checked;
+                          // setJobs(newItems);
+
+                          setSelectAll(false);
+                        }}
+                      />
+                      {item.id}
+                    </Label>
+                  </FormGroup>
+                </th>
+                <td>{item.jobName}</td>
+                <td>{item.jobGroup}</td>
+                <td>
+                  <Button
+                    size="sm"
+                    color="primary"
+                    className="mb-2 mb-md-0"
+                    onClick={() => {
+                      props.onEdit(item);
+                    }}
+                  >
+                    Edit
+                  </Button>{" "}
+                  <Button
+                    size="sm"
+                    color="warning"
+                    className="mb-2 mb-md-0"
+                    onClick={() => {}}
+                  >
+                    Stop
+                  </Button>{" "}
+                  <Button
+                    size="sm"
+                    color="success"
+                    className="mb-2 mb-md-0"
+                    onClick={() => {}}
+                  >
+                    Start
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
       ) : (
-        <ul>
-          {jobs.map((i) => (
-            <li key={i}>
-              {i}
-              <Button
-                size="sm"
-                onClick={() => {
-                  updateJob("jobName", "job" + i);
-                }}
-              >
-                toggle
-              </Button>
-            </li>
-          ))}
-        </ul>
+        <p>No jobs, please click button to create a one!</p>
       )}
     </div>
   );
 }
 
+const initSetting = () => ({
+  id: undefined,
+  jobName: "",
+  jobGroup: "",
+  jobDesc: "",
+  triggerType: "",
+  triggerValue: "",
+  // TODO: others properties
+});
+
 class MyAlertModal extends Component {
   constructor(props, ref) {
     super(props);
+
     this.state = {
-      hide: false,
-      setting: {
-        jobName: "",
-      },
+      show: false,
+      setting: initSetting(),
     };
 
     this.toggleShow = this.toggleShow.bind(this);
@@ -129,8 +220,13 @@ class MyAlertModal extends Component {
   }
 
   toggleShow() {
+    if (this.state.show) {
+      this.setState({
+        setting: initSetting(),
+      });
+    }
     this.setState({
-      hide: !this.state.hide,
+      show: !this.state.show,
     });
   }
 
@@ -148,7 +244,7 @@ class MyAlertModal extends Component {
 
   render() {
     return (
-      <Modal isOpen={this.state.hide} toggle={this.toggleShow}>
+      <Modal isOpen={this.state.show} toggle={this.toggleShow}>
         <ModalHeader>Setting</ModalHeader>
         <ModalBody>
           <Form>
@@ -157,15 +253,48 @@ class MyAlertModal extends Component {
                 placeholder="Job name"
                 name="jobName"
                 value={this.state.setting.jobName}
-                onClick={this.toggleChange}
+                onChange={this.toggleChange}
+                required
               />
             </FormGroup>
             <FormGroup>
               <Input
                 placeholder="Job Group"
-                name="jobGrop"
-                value={this.state.setting.jobGrop}
-                onClick={this.toggleChange}
+                name="jobGroup"
+                value={this.state.setting.jobGroup}
+                onChange={this.toggleChange}
+                required
+              />
+            </FormGroup>
+            <FormGroup>
+              <Input
+                placeholder="Job Description"
+                name="jobDesc"
+                value={this.state.setting.jobDesc}
+                onChange={this.toggleChange}
+                required
+              />
+            </FormGroup>
+            <FormGroup>
+              <Input
+                placeholder="Trigger Type"
+                name="triggerType"
+                type="select"
+                value={this.state.setting.triggerType || 0}
+                onChange={this.toggleChange}
+                required
+              >
+                <option value={0}>Simple Trigger</option>
+                <option value={1}>Cron Trigger</option>
+              </Input>
+            </FormGroup>
+            <FormGroup>
+              <Input
+                placeholder="Trigger Value"
+                name="triggerValue"
+                value={this.state.setting.triggerValue || ""}
+                onChange={this.toggleChange}
+                required
               />
             </FormGroup>
           </Form>

@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Quartz.Admin.AspNetCoreReactWebHosting", "Quartz.Admin.AspNetCoreReactWebHosting\Quartz.Admin.AspNetCoreReactWebHosting.csproj", "{B5190D47-70F1-414B-997D-556EA63E8E5E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Quartz.Admin.AspNetCoreReactWebHosting", "src\Quartz.Admin.AspNetCoreReactWebHosting\Quartz.Admin.AspNetCoreReactWebHosting.csproj", "{B5190D47-70F1-414B-997D-556EA63E8E5E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
