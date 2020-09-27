@@ -11,9 +11,10 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="3.1.8" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.0-rc.1.20451.13" />
         <PackageReference Include="Quartz.AspNetCore" Version="3.1.0" />
         <PackageReference Include="Quartz.Serialization.Json" Version="3.1.0" />
-        <PackageReference Include="System.Data.SQLite" Version="1.0.113.1" />
+       <PackageReference Include="System.Data.SQLite" Version="1.0.113.1" />
     </ItemGroup>
 
     <ItemGroup>

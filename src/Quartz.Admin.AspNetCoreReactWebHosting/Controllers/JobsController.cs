@@ -4,6 +4,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Quartz.Admin.AspNetCoreReactWebHosting.Data;
+using Quartz.Admin.AspNetCoreReactWebHosting.Models;
 using Quartz.Impl.AdoJobStore;
 using Quartz.Impl.Matchers;
 
@@ -14,10 +16,13 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
     public class JobsController : ControllerBase
     {
         private readonly ISchedulerFactory _schedulerFactory;
+        private readonly JobStoreContext _jobStoreContext;
 
-        public JobsController(ISchedulerFactory schedulerFactory)
+        public JobsController(ISchedulerFactory schedulerFactory,
+            JobStoreContext jobStoreContext)
         {
             _schedulerFactory = schedulerFactory;
+            _jobStoreContext = jobStoreContext;
         }
 
         [HttpGet("{id}")]
@@ -90,6 +95,16 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
                return Ok(new {code = 0, message = "ok"});
            }
            return Ok(new {code=1,message="no trigger create"});
+        }
+
+        [HttpPost]
+        public IActionResult CreateJob(JobSettingCreateOrUpdateDto dto,
+            CancellationToken cancellationToken = default)
+        {
+            var newJobSetting = dto.NewJobSetting();
+            _jobStoreContext.JobSettings.AddAsync(newJobSetting, cancellationToken);
+            _jobStoreContext.SaveChangesAsync(cancellationToken);
+            return Ok(new {code = 0, message = "created"});
         }
     }
 }

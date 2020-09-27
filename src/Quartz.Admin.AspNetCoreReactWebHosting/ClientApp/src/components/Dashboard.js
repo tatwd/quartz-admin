@@ -1,18 +1,9 @@
-import React, {
-  Component,
-  forwardRef,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { Component, useEffect, useRef, useState } from "react";
 import {
-  Alert,
   Button,
   Form,
   FormGroup,
   Input,
-  InputGroup,
   Label,
   Modal,
   ModalBody,
@@ -86,6 +77,7 @@ function JobsTable(props) {
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
+  const [selectedItems, setSelectedItems] = useState([]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -140,15 +132,19 @@ function JobsTable(props) {
                       <Input
                         type="checkbox"
                         id={"item" + item.id}
-                        checked={item.selected}
+                        // checked={item.selected}
                         onChange={(event) => {
                           // FIXME: toggle item checked state
-                          // const newItems = jobs;
                           // console.log(event.target.checked);
-                          // newItems[idx].selected = event.target.checked;
-                          // setJobs(newItems);
+                          // jobs[idx].selected = event.target.checked;
+                          // setJobs(jobs);
 
-                          setSelectAll(false);
+                          // setSelectAll(false);
+                          const newStates = selectedItems;
+                          if (event.target.checked) newStates.push(item);
+                          console.log(newStates);
+                          setSelectedItems(newStates);
+                          console.log(1);
                         }}
                       />
                       {item.id}
@@ -158,6 +154,14 @@ function JobsTable(props) {
                 <td>{item.jobName}</td>
                 <td>{item.jobGroup}</td>
                 <td>
+                  <Button
+                    size="sm"
+                    color="link"
+                    className="mb-2 mb-md-0"
+                    onClick={() => {}}
+                  >
+                    Logs
+                  </Button>{" "}
                   <Button
                     size="sm"
                     color="primary"
