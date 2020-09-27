@@ -76,8 +76,7 @@ const testData = [
 function JobsTable(props) {
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState([]);
-  const [selectAll, setSelectAll] = useState(false);
-  const [selectedItems, setSelectedItems] = useState([]);
+  const [selectedAll, setSelectedAll] = useState(false);
 
   useEffect(() => {
     setTimeout(() => {
@@ -101,11 +100,9 @@ function JobsTable(props) {
                     <Input
                       type="checkbox"
                       id="selectAll"
-                      checked={selectAll}
+                      checked={selectedAll}
                       onChange={(event) => {
-                        setSelectAll(!selectAll);
-
-                        // FIXME: select all toggle stuff
+                        setSelectedAll(!selectedAll);
                         setJobs(
                           jobs.map((i) => {
                             i.selected = event.target.checked;
@@ -132,22 +129,16 @@ function JobsTable(props) {
                       <Input
                         type="checkbox"
                         id={"item" + item.id}
-                        // checked={item.selected}
+                        checked={item.selected}
+                        value={idx}
                         onChange={(event) => {
-                          // FIXME: toggle item checked state
-                          // console.log(event.target.checked);
-                          // jobs[idx].selected = event.target.checked;
-                          // setJobs(jobs);
-
-                          // setSelectAll(false);
-                          const newStates = selectedItems;
-                          if (event.target.checked) newStates.push(item);
-                          console.log(newStates);
-                          setSelectedItems(newStates);
-                          console.log(1);
+                          const newJobs = jobs.slice();
+                          newJobs[idx].selected = event.target.checked;
+                          setJobs(newJobs);
+                          if (selectedAll) setSelectedAll(false);
                         }}
                       />
-                      {item.id}
+                      #{item.id}
                     </Label>
                   </FormGroup>
                 </th>
