@@ -3,6 +3,8 @@ import {
   Button,
   Form,
   FormGroup,
+  FormFeedback,
+  FormText,
   Input,
   Label,
   Modal,
@@ -12,31 +14,47 @@ import {
   Table,
 } from "reactstrap";
 
-const DashboardContext = React.createContext({});
-
 export function Dashboard() {
-  const [show, setShow] = useState(false);
-  const [job, setJob] = useState({
-    id: undefined,
-    jobName: "a",
-    jobGroup: "g",
-  });
   const alertRef = useRef(null);
+  const selectedItems = [];
+  const map = {};
+
+  const handleEdit = (item) => {
+    console.log(item);
+    alertRef.current.setState({
+      setting: item,
+    });
+    alertRef.current.toggleShow();
+  };
+
+  const handleSelectChange = (item, checked) => {
+    if (checked) {
+      map[item.id] = selectedItems.push(item) - 1;
+      return;
+    }
+    if (map[item.id] !== undefined) {
+      selectedItems.splice(map[item.id], 1);
+      map[item.id] = undefined;
+      return;
+    }
+  };
 
   return (
     <div>
       <Button color="info" onClick={() => alertRef.current.toggleShow()}>
         New Job
-      </Button>
-      <JobsTable
-        onEdit={(item) => {
-          console.log(item);
-          alertRef.current.setState({
-            setting: item,
-          });
-          alertRef.current.toggleShow();
+      </Button>{" "}
+      <Button
+        color="danger"
+        onClick={() => {
+          const selectedIds = selectedItems.map((i) => i.id);
+          console.log(selectedIds);
+          window.confirm("Sure to delete these jobs?");
         }}
-      />
+      >
+        Delete Job(s)
+      </Button>
+      <JobsTable onEdit={handleEdit} onSelectChange={handleSelectChange} />
       <MyAlertModal ref={alertRef} />
     </div>
   );
@@ -102,10 +120,12 @@ function JobsTable(props) {
                       id="selectAll"
                       checked={selectedAll}
                       onChange={(event) => {
+                        const checked = event.target.checked;
                         setSelectedAll(!selectedAll);
                         setJobs(
                           jobs.map((i) => {
-                            i.selected = event.target.checked;
+                            props.onSelectChange(i, checked);
+                            i.selected = checked;
                             return i;
                           })
                         );
@@ -132,10 +152,12 @@ function JobsTable(props) {
                         checked={item.selected}
                         value={idx}
                         onChange={(event) => {
+                          const checked = event.target.checked;
                           const newJobs = jobs.slice();
-                          newJobs[idx].selected = event.target.checked;
+                          newJobs[idx].selected = checked;
                           setJobs(newJobs);
                           if (selectedAll) setSelectedAll(false);
+                          props.onSelectChange(item, checked);
                         }}
                       />
                       #{item.id}
@@ -157,9 +179,7 @@ function JobsTable(props) {
                     size="sm"
                     color="primary"
                     className="mb-2 mb-md-0"
-                    onClick={() => {
-                      props.onEdit(item);
-                    }}
+                    onClick={() => props.onEdit(item)}
                   >
                     Edit
                   </Button>{" "}
@@ -208,13 +228,11 @@ class MyAlertModal extends Component {
     this.state = {
       show: false,
       setting: initSetting(),
+      invalidMessage: "",
     };
-
-    this.toggleShow = this.toggleShow.bind(this);
-    this.toggleChange = this.toggleChange.bind(this);
   }
 
-  toggleShow() {
+  toggleShow = () => {
     if (this.state.show) {
       this.setState({
         setting: initSetting(),
@@ -223,9 +241,9 @@ class MyAlertModal extends Component {
     this.setState({
       show: !this.state.show,
     });
-  }
+  };
 
-  toggleChange(event) {
+  toggleChange = (event) => {
     const target = event.target;
     const value = target.type === "checkbox" ? target.checked : target.value;
     const name = target.name;
@@ -235,7 +253,7 @@ class MyAlertModal extends Component {
     this.setState({
       setting: newSetting,
     });
-  }
+  };
 
   render() {
     return (
@@ -243,6 +261,7 @@ class MyAlertModal extends Component {
         <ModalHeader>Setting</ModalHeader>
         <ModalBody>
           <Form>
+            <p>任务设置</p>
             <FormGroup>
               <Input
                 placeholder="Job name"
@@ -289,9 +308,45 @@ class MyAlertModal extends Component {
                 name="triggerValue"
                 value={this.state.setting.triggerValue || ""}
                 onChange={this.toggleChange}
+                onBlur={(event) => {
+                  const expr = event.target.value;
+                  const type = this.state.setting.triggerType;
+                  if (expr) {
+                    fetch(`api/jobs/validexpr?expr=${expr}&type=${type}`)
+                      .then((res) => res.json())
+                      .then((res) => {
+                        console.log(res);
+                        this.setState({
+                          invalidMessage: res.code === 0 ? "ok" : res.message,
+                        });
+                      });
+                  } else
+                    this.setState({
+                      invalidMessage: "不能为空",
+                    });
+                }}
                 required
+                valid={this.state.invalidMessage === "ok"}
+                invalid={this.state.invalidMessage !== "ok"}
               />
+              <FormFeedback>
+                {this.state.invalidMessage || "不能为空"}
+              </FormFeedback>
+              <FormText>
+                <span>
+                  1. 选择<code>Simple Trigger</code>取值必须形如
+                  <code>启动时间点|间隔秒数|重复数</code>。举例，
+                  <code>2020-09-01 02:00|5|2</code>表示将在2020-09-01
+                  02:00启动任务并间隔5s重复2次（共3次执行）。
+                </span>
+                <br />
+                <span>
+                  2. 选择<code>Cron Trigger</code>取值必须使用 Cron 表达式。
+                </span>
+              </FormText>
             </FormGroup>
+            <p>接口设置</p>
+            {/* TODO */}
           </Form>
         </ModalBody>
         <ModalFooter>
