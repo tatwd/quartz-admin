@@ -75,7 +75,7 @@ function JobsTable(props) {
       })
       .catch(err => alert('Network error!'))
       .finally(() => setLoading(false))
-  }, [refresh]);
+  }, []);
 
   return (
     <div className="mt-3">
