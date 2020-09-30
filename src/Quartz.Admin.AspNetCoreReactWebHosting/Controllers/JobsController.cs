@@ -58,9 +58,9 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
                 jobs.Add(new
                 {
                     jobKey = key.Name,
-                        jobGroup = key.Group,
-                        jobDesc = jobDetail.Description,
-                        triggers = triggers
+                    jobGroup = key.Group,
+                    jobDesc = jobDetail.Description,
+                    triggers
                 });
             }
             return Ok(jobs);
@@ -98,14 +98,46 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
             return Ok(new { code = 1, message = "no trigger create" });
         }
 
-        [HttpPost]
-        public IActionResult CreateJob(JobSettingCreateOrUpdateDto dto,
+        [HttpGet("settings")]
+        public async Task<IActionResult> GetJobSettings(int? id,
+            int? page, int? limit)
+        {
+            if (id.HasValue)
+            {
+                var setting = await _jobStoreContext.JobSettings.FindAsync(id.Value);
+                return Ok(new {code = 0, message = "ok", detail = setting});
+            }
+
+            var take = limit ?? 10;
+            var skip = ((page ?? 1) - 1) * take;
+
+            var settings = _jobStoreContext.JobSettings.Where(s => s.State > -1)
+                .Skip(skip).Take(take).ToList();
+            return Ok(new {code = 0, message = "ok", detail = settings});
+        }
+
+        [HttpPost("settings")]
+        public async Task<IActionResult> CreateOrUpdateJobSetting(JobSettingCreateOrUpdateDto dto,
             CancellationToken cancellationToken = default)
         {
-            var newJobSetting = dto.NewJobSetting();
-            _jobStoreContext.JobSettings.AddAsync(newJobSetting, cancellationToken);
-            _jobStoreContext.SaveChangesAsync(cancellationToken);
-            return Ok(new { code = 0, message = "created" });
+            JobSetting newJobSetting = null;
+            if (dto.Id.HasValue)
+            {
+                newJobSetting = await _jobStoreContext.JobSettings.FindAsync(dto.Id.Value);
+                if (newJobSetting == null)
+                {
+                    return BadRequest(new {code = 1404, message = "Cannot update, not found job setting"});
+                }
+                dto.UpdateJobSetting(newJobSetting);
+                _jobStoreContext.Update(newJobSetting);
+            }
+            else
+            {
+                newJobSetting = dto.NewJobSetting();
+                await _jobStoreContext.JobSettings.AddAsync(newJobSetting, cancellationToken);
+            }
+            await _jobStoreContext.SaveChangesAsync(cancellationToken);
+            return Ok(new { code = 0, message = "ok" });
         }
 
         [HttpGet("validexpr")]
@@ -124,7 +156,7 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
             else
             {
                 isValid = CronExpression.IsValidExpression(expr);
-                msg = isValid ? "valid" : "Cron 表达无效";
+                msg = isValid ? "valid" : "Cron expression is invalid";
             }
             if (!isValid)
                 return BadRequest(new { code = 1400, message = msg });

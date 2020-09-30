@@ -20,7 +20,6 @@ export function Dashboard() {
   const map = {};
 
   const handleEdit = (item) => {
-    console.log(item);
     alertRef.current.setState({
       setting: item,
     });
@@ -35,7 +34,6 @@ export function Dashboard() {
     if (map[item.id] !== undefined) {
       selectedItems.splice(map[item.id], 1);
       map[item.id] = undefined;
-      return;
     }
   };
 
@@ -60,49 +58,24 @@ export function Dashboard() {
   );
 }
 
-const testData = [
-  {
-    id: 1,
-    jobName: "job1",
-    jobGroup: "group1",
-    jobDesc: "desc1",
-    selected: false,
-  },
-  {
-    id: 2,
-    jobName: "job2",
-    jobGroup: "group2",
-    jobDesc: "desc2",
-    selected: false,
-  },
-  {
-    id: 3,
-    jobName: "job3",
-    jobGroup: "group3",
-    jobDesc: "desc3",
-    selected: false,
-  },
-  {
-    id: 4,
-    jobName: "job4",
-    jobGroup: "group4",
-    jobDesc: "desc4",
-    selected: false,
-  },
-];
-
 function JobsTable(props) {
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState([]);
   const [selectedAll, setSelectedAll] = useState(false);
 
   useEffect(() => {
-    setTimeout(() => {
-      // TODO: fetch jobs from api
-      setJobs(testData);
-      setLoading(false);
-    }, 1000);
-  }, []);
+    // TODO: paging query
+    fetch('api/jobs/settings?page=1&limit=10')
+      .then(res => res.json())
+      .then(res => {
+        console.log(res)
+        if (res.code === 0) {
+          setJobs(res.detail);
+        } else window.alert(res.message || 'Server error!')
+      })
+      .catch(err => alert('Network error!'))
+      .finally(() => setLoading(false))
+  }, [refresh]);
 
   return (
     <div className="mt-3">
@@ -217,7 +190,11 @@ const initSetting = () => ({
   jobGroup: "",
   jobDesc: "",
   triggerType: "",
-  triggerValue: "",
+  triggerExpr: "",
+  httpApiUrl: "",
+  httpMethod: "GET",
+  httpContentType: "application/x-www-form-urlencoded",
+  httpBody: "",
   // TODO: others properties
 });
 
@@ -255,6 +232,23 @@ class MyAlertModal extends Component {
     });
   };
 
+  handleSubmit = (event) => {
+    console.log(event)
+    var newSetting = this.state.setting
+    newSetting.triggerType = parseInt(newSetting.triggerType)
+    fetch('api/jobs/settings', {
+      method: 'POST',
+      body: JSON.stringify(this.state.setting),
+      headers: {'Content-Type': 'application/json'}
+    }).then(res => res.json())
+      .then(res => {
+        console.log(res)
+        if (res.code === 0) {
+          this.toggleShow()
+        } else window.alert(res.message || 'Server error!')
+      }).catch(err => window.alert('Network error!'))
+  }
+
   render() {
     return (
       <Modal isOpen={this.state.show} toggle={this.toggleShow}>
@@ -282,6 +276,7 @@ class MyAlertModal extends Component {
             </FormGroup>
             <FormGroup>
               <Input
+                type="textarea"
                 placeholder="Job Description"
                 name="jobDesc"
                 value={this.state.setting.jobDesc}
@@ -304,9 +299,9 @@ class MyAlertModal extends Component {
             </FormGroup>
             <FormGroup>
               <Input
-                placeholder="Trigger Value"
-                name="triggerValue"
-                value={this.state.setting.triggerValue || ""}
+                placeholder="Trigger Expression"
+                name="triggerExpr"
+                value={this.state.setting.triggerExpr || ""}
                 onChange={this.toggleChange}
                 onBlur={(event) => {
                   const expr = event.target.value;
@@ -346,11 +341,50 @@ class MyAlertModal extends Component {
               </FormText>
             </FormGroup>
             <p>接口设置</p>
-            {/* TODO */}
+            <FormGroup>
+              <Input
+                type="textarea"
+                placeholder="HTTP API URL"
+                name="httpApiUrl"
+                value={this.state.setting.httpApiUrl}
+                onChange={this.toggleChange}
+                required
+              />
+            </FormGroup>
+            <FormGroup>
+              <Input
+                type="select"
+                placeholder="HTTP Method"
+                name="httpMethod"
+                value={this.state.setting.httpMethod}
+                onChange={this.toggleChange}
+                required
+              >
+                <option>GET</option>
+                <option>POST</option>
+              </Input>
+            </FormGroup>
+            <FormGroup>
+              <Input
+                placeholder="HTTP Content Type"
+                name="httpContentType"
+                value={this.state.setting.httpContentType || ""}
+                onChange={this.toggleChange}
+              />
+            </FormGroup>
+            <FormGroup>
+              <Input
+                type="textarea"
+                placeholder="HTTP Body"
+                name="httpBody"
+                value={this.state.setting.httpBody || ""}
+                onChange={this.toggleChange}
+              />
+            </FormGroup>
           </Form>
         </ModalBody>
         <ModalFooter>
-          <Button onClick={this.toggleShow} color="primary">
+          <Button onClick={this.handleSubmit} color="primary">
             Submit
           </Button>
           <Button onClick={this.toggleShow}>Cancel</Button>
