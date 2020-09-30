@@ -113,10 +113,70 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
         {
             if (string.IsNullOrEmpty(expr))
                 return BadRequest(new { code = 1400, message = "不能为空" });
-            var isValid = type == 0 ? false : CronExpression.IsValidExpression(expr);
+
+            string msg;
+            bool isValid;
+
+            if (type == 0)
+            {
+                isValid = IsValidSimpleExpr(expr, out msg);
+            }
+            else
+            {
+                isValid = CronExpression.IsValidExpression(expr);
+                msg = isValid ? "valid" : "Cron 表达无效";
+            }
             if (!isValid)
-                return BadRequest(new { code = 1400, message = "表达无效" });
+                return BadRequest(new { code = 1400, message = msg });
             return Ok(new { code = 0, message = "valid" });
         }
+
+        /// <summary>
+        /// Valid simple trigger value. i.e.
+        ///     2020-09-30 03:00|5|2
+        /// </summary>
+        /// <param name="expr"></param>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        private static bool IsValidSimpleExpr(string expr, out string message)
+        {
+            if (string.IsNullOrEmpty(expr))
+            {
+                message = "Required";
+                return false;
+            }
+
+            var values = expr.Split(new[] {'|'}, StringSplitOptions.RemoveEmptyEntries);
+            if (values.Length != 3)
+            {
+                message = "Must contain 3 parts, split by '|'";
+                return false;
+            }
+
+            var startAt = values[0];
+            var interval = values[1];
+            var repeatCount = values[2];
+
+            if (!DateTime.TryParse(startAt, out _))
+            {
+                message = "First part must format by DateTime type";
+                return false;
+            }
+
+            if (!int.TryParse(interval, out _))
+            {
+                message = "Second part must be a integer";
+                return false;
+            }
+
+            if (!int.TryParse(repeatCount, out _))
+            {
+                message = "Last part must be a integer";
+                return false;
+            };
+            message = "valid";
+            return true;
+        }
+
     }
 }
