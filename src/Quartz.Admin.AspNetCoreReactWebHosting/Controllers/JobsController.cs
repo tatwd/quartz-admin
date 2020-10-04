@@ -111,8 +111,12 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
             var take = limit ?? 10;
             var skip = ((page ?? 1) - 1) * take;
 
-            var settings = _jobStoreContext.JobSettings.Where(s => s.State > -1)
-                .Skip(skip).Take(take).ToList();
+            var settings = _jobStoreContext.JobSettings
+                .Where(s => s.State > -1)
+                .OrderByDescending(s => s.CreateTime)
+                .Skip(skip)
+                .Take(take)
+                .ToList();
             return Ok(new {code = 0, message = "ok", detail = settings});
         }
 
@@ -120,7 +124,7 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
         public async Task<IActionResult> CreateOrUpdateJobSetting(JobSettingCreateOrUpdateDto dto,
             CancellationToken cancellationToken = default)
         {
-            JobSetting newJobSetting = null;
+            JobSetting newJobSetting;
             if (dto.Id.HasValue)
             {
                 newJobSetting = await _jobStoreContext.JobSettings.FindAsync(dto.Id.Value);
@@ -138,6 +142,20 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
             }
             await _jobStoreContext.SaveChangesAsync(cancellationToken);
             return Ok(new { code = 0, message = "ok" });
+        }
+
+        [HttpPost("settings/delete")]
+        public async Task<IActionResult> DeleteJobSetting([FromBody] int[] ids)
+        {
+            var settings = _jobStoreContext.JobSettings
+                    .Where(i => ids.Contains(i.Id));
+            foreach (var setting in settings)
+            {
+                setting.State = -1; // make to delete state
+            }
+            _jobStoreContext.JobSettings.UpdateRange(settings);
+            await _jobStoreContext.SaveChangesAsync();
+            return Ok(new {code = 0, message = "ok"});
         }
 
         [HttpGet("validexpr")]

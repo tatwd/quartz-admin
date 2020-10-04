@@ -26,6 +26,28 @@ export function Dashboard() {
     alertRef.current.toggleShow();
   };
 
+  const handleDelete = () => {
+    const selectedIds = selectedItems.map((i) => i.id);
+    console.log(selectedIds);
+    if (window.confirm("Sure to delete these jobs?")) {
+      fetch("api/jobs/settings/delete", {
+        method: "POST",
+        body: JSON.stringify(selectedIds),
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+        },
+      })
+        .then((res) => res.json())
+        .then((res) => {
+          console.log(res);
+          if (res.code === 0) {
+            // bala bala ...
+          } else window.alert("Server error!");
+        })
+        .catch((err) => window.alert("Network error!"));
+    }
+  };
+
   const handleSelectChange = (item, checked) => {
     if (checked) {
       map[item.id] = selectedItems.push(item) - 1;
@@ -42,14 +64,7 @@ export function Dashboard() {
       <Button color="info" onClick={() => alertRef.current.toggleShow()}>
         New Job
       </Button>{" "}
-      <Button
-        color="danger"
-        onClick={() => {
-          const selectedIds = selectedItems.map((i) => i.id);
-          console.log(selectedIds);
-          window.confirm("Sure to delete these jobs?");
-        }}
-      >
+      <Button color="danger" onClick={handleDelete}>
         Delete Job(s)
       </Button>
       <JobsTable onEdit={handleEdit} onSelectChange={handleSelectChange} />
@@ -65,16 +80,16 @@ function JobsTable(props) {
 
   useEffect(() => {
     // TODO: paging query
-    fetch('api/jobs/settings?page=1&limit=10')
-      .then(res => res.json())
-      .then(res => {
-        console.log(res)
+    fetch("api/jobs/settings?page=1&limit=10")
+      .then((res) => res.json())
+      .then((res) => {
+        console.log(res);
         if (res.code === 0) {
           setJobs(res.detail);
-        } else window.alert(res.message || 'Server error!')
+        } else window.alert(res.message || "Server error!");
       })
-      .catch(err => alert('Network error!'))
-      .finally(() => setLoading(false))
+      .catch((err) => alert("Network error!"))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
@@ -122,7 +137,7 @@ function JobsTable(props) {
                       <Input
                         type="checkbox"
                         id={"item" + item.id}
-                        checked={item.selected}
+                        checked={!!item.selected}
                         value={idx}
                         onChange={(event) => {
                           const checked = event.target.checked;
@@ -233,21 +248,23 @@ class MyAlertModal extends Component {
   };
 
   handleSubmit = (event) => {
-    console.log(event)
-    var newSetting = this.state.setting
-    newSetting.triggerType = parseInt(newSetting.triggerType)
-    fetch('api/jobs/settings', {
-      method: 'POST',
+    console.log(event);
+    var newSetting = this.state.setting;
+    newSetting.triggerType = parseInt(newSetting.triggerType);
+    fetch("api/jobs/settings", {
+      method: "POST",
       body: JSON.stringify(this.state.setting),
-      headers: {'Content-Type': 'application/json'}
-    }).then(res => res.json())
-      .then(res => {
-        console.log(res)
+      headers: { "Content-Type": "application/json" },
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        console.log(res);
         if (res.code === 0) {
-          this.toggleShow()
-        } else window.alert(res.message || 'Server error!')
-      }).catch(err => window.alert('Network error!'))
-  }
+          this.toggleShow();
+        } else window.alert(res.message || "Server error!");
+      })
+      .catch((err) => window.alert("Network error!"));
+  };
 
   render() {
     return (
