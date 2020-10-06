@@ -1,4 +1,4 @@
-import React, { Component, useEffect, useRef, useState } from "react";
+import React, { Component, useRef } from "react";
 import {
   Button,
   Form,
@@ -15,20 +15,26 @@ import {
 } from "reactstrap";
 
 export function Dashboard() {
-  const alertRef = useRef(null);
-  const selectedItems = [];
-  const map = {};
+  const modalRef = useRef(null);
+  const jobsTableRef = useRef(null);
 
   const handleEdit = (item) => {
-    alertRef.current.setState({
+    modalRef.current.setState({
       setting: item,
     });
-    alertRef.current.toggleShow();
+    modalRef.current.toggleShow();
   };
 
   const handleDelete = () => {
-    const selectedIds = selectedItems.map((i) => i.id);
+    // get selected items
+    const selectedIds = jobsTableRef.current.state.jobs
+      .filter((i) => i.selected)
+      .map((i) => i.id);
     console.log(selectedIds);
+
+    if (!selectedIds.length)
+      return window.alert("Please select job(s) that you want to delete!");
+
     if (window.confirm("Sure to delete these jobs?")) {
       fetch("api/jobs/settings/delete", {
         method: "POST",
@@ -41,162 +47,174 @@ export function Dashboard() {
         .then((res) => {
           console.log(res);
           if (res.code === 0) {
-            // bala bala ...
+            jobsTableRef.current.fetchData();
           } else window.alert("Server error!");
         })
         .catch((err) => window.alert("Network error!"));
     }
   };
 
-  const handleSelectChange = (item, checked) => {
-    if (checked) {
-      map[item.id] = selectedItems.push(item) - 1;
-      return;
-    }
-    if (map[item.id] !== undefined) {
-      selectedItems.splice(map[item.id], 1);
-      map[item.id] = undefined;
-    }
+  const handleModalSubmitSuccess = () => {
+    jobsTableRef.current.fetchData();
   };
 
   return (
     <div>
-      <Button color="info" onClick={() => alertRef.current.toggleShow()}>
+      <Button color="info" onClick={() => modalRef.current.toggleShow()}>
         New Job
       </Button>{" "}
       <Button color="danger" onClick={handleDelete}>
         Delete Job(s)
       </Button>
-      <JobsTable onEdit={handleEdit} onSelectChange={handleSelectChange} />
-      <MyAlertModal ref={alertRef} />
+      <JobsTable ref={jobsTableRef} onEdit={handleEdit} />
+      <MyAlertModal ref={modalRef} onSubmitSuccess={handleModalSubmitSuccess} />
     </div>
   );
 }
 
-function JobsTable(props) {
-  const [loading, setLoading] = useState(true);
-  const [jobs, setJobs] = useState([]);
-  const [selectedAll, setSelectedAll] = useState(false);
+class JobsTable extends Component {
+  constructor(props, ref) {
+    super(props);
 
-  useEffect(() => {
-    // TODO: paging query
+    this.state = {
+      loading: true,
+      jobs: [],
+      selectedAll: false,
+    };
+  }
+
+  componentDidMount = () => {
+    this.fetchData();
+  };
+
+  fetchData = () => {
     fetch("api/jobs/settings?page=1&limit=10")
       .then((res) => res.json())
       .then((res) => {
         console.log(res);
         if (res.code === 0) {
-          setJobs(res.detail);
+          this.setState({
+            jobs: res.detail,
+          });
         } else window.alert(res.message || "Server error!");
       })
       .catch((err) => alert("Network error!"))
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => this.setState({ loading: false }));
+  };
 
-  return (
-    <div className="mt-3">
-      {loading ? (
-        <i>Loading ...</i>
-      ) : jobs.length ? (
-        <Table striped responsive>
-          <thead>
-            <tr>
-              <th className="">
-                <FormGroup check>
-                  <Label check>
-                    <Input
-                      type="checkbox"
-                      id="selectAll"
-                      checked={selectedAll}
-                      onChange={(event) => {
-                        const checked = event.target.checked;
-                        setSelectedAll(!selectedAll);
-                        setJobs(
-                          jobs.map((i) => {
-                            props.onSelectChange(i, checked);
-                            i.selected = checked;
-                            return i;
-                          })
-                        );
-                      }}
-                    />
-                    All
-                  </Label>
-                </FormGroup>
-              </th>
-              <th>Job Name</th>
-              <th>Job Group</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {jobs.map((item, idx) => (
-              <tr key={idx}>
-                <th scope="row">
+  render() {
+    const { loading, jobs, selectedAll } = this.state;
+    return (
+      <div className="mt-3">
+        {loading ? (
+          <i>Loading ...</i>
+        ) : jobs.length ? (
+          <Table striped responsive>
+            <thead>
+              <tr>
+                <th className="">
                   <FormGroup check>
                     <Label check>
                       <Input
                         type="checkbox"
-                        id={"item" + item.id}
-                        checked={!!item.selected}
-                        value={idx}
+                        id="selectAll"
+                        checked={selectedAll}
                         onChange={(event) => {
                           const checked = event.target.checked;
-                          const newJobs = jobs.slice();
-                          newJobs[idx].selected = checked;
-                          setJobs(newJobs);
-                          if (selectedAll) setSelectedAll(false);
-                          props.onSelectChange(item, checked);
+                          this.setState({ selectedAll: !selectedAll });
+                          this.setState({
+                            jobs: jobs.map((i) => {
+                              if (i.selected !== checked) {
+                                i.selected = checked;
+                              }
+                              return i;
+                            }),
+                          });
                         }}
                       />
-                      #{item.id}
+                      All
                     </Label>
                   </FormGroup>
                 </th>
-                <td>{item.jobName}</td>
-                <td>{item.jobGroup}</td>
-                <td>
-                  <Button
-                    size="sm"
-                    color="link"
-                    className="mb-2 mb-md-0"
-                    onClick={() => {}}
-                  >
-                    Logs
-                  </Button>{" "}
-                  <Button
-                    size="sm"
-                    color="primary"
-                    className="mb-2 mb-md-0"
-                    onClick={() => props.onEdit(item)}
-                  >
-                    Edit
-                  </Button>{" "}
-                  <Button
-                    size="sm"
-                    color="warning"
-                    className="mb-2 mb-md-0"
-                    onClick={() => {}}
-                  >
-                    Stop
-                  </Button>{" "}
-                  <Button
-                    size="sm"
-                    color="success"
-                    className="mb-2 mb-md-0"
-                    onClick={() => {}}
-                  >
-                    Start
-                  </Button>
-                </td>
+                <th>Job Name</th>
+                <th>Job Group</th>
+                <th>Job Description</th>
+                <th>State</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
-      ) : (
-        <p>No jobs, please click button to create a one!</p>
-      )}
-    </div>
-  );
+            </thead>
+            <tbody>
+              {jobs.map((item, idx) => (
+                <tr key={idx}>
+                  <th scope="row">
+                    <FormGroup check>
+                      <Label check>
+                        <Input
+                          type="checkbox"
+                          id={"item" + item.id}
+                          checked={!!item.selected}
+                          value={idx}
+                          onChange={(event) => {
+                            const checked = event.target.checked;
+                            const newJobs = jobs.slice();
+                            newJobs[idx].selected = checked;
+                            this.setState({ jobs: newJobs });
+                            if (selectedAll)
+                              this.setState({ selectedAll: false });
+                          }}
+                        />
+                        #{item.id}
+                      </Label>
+                    </FormGroup>
+                  </th>
+                  <td>{item.jobName}</td>
+                  <td>{item.jobGroup}</td>
+                  <td>{item.jobDesc}</td>
+                  <td>{item.state}</td>
+                  <td style={{minWidth: '200px'}}>
+                    <Button
+                      size="sm"
+                      color="link"
+                      className="mb-2 mb-md-0"
+                      onClick={() => {}}
+                    >
+                      Logs
+                    </Button>{" "}
+                    <Button
+                      size="sm"
+                      color="primary"
+                      className="mb-2 mb-md-0"
+                      onClick={() => this.props.onEdit(item)}
+                    >
+                      Edit
+                    </Button>{" "}
+                    <Button
+                      size="sm"
+                      color="warning"
+                      className="mb-2 mb-md-0"
+                      onClick={() => {}}
+                    >
+                      Stop
+                    </Button>{" "}
+                    <Button
+                      size="sm"
+                      color="success"
+                      className="mb-2 mb-md-0"
+                      onClick={() => {}}
+                    >
+                      Start
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        ) : (
+          <p>No jobs, please click button to create a one!</p>
+        )}
+      </div>
+    );
+  }
 }
 
 const initSetting = () => ({
@@ -220,7 +238,7 @@ class MyAlertModal extends Component {
     this.state = {
       show: false,
       setting: initSetting(),
-      invalidMessage: "",
+      triggerExprInvalidMessage: "",
     };
   }
 
@@ -261,6 +279,7 @@ class MyAlertModal extends Component {
         console.log(res);
         if (res.code === 0) {
           this.toggleShow();
+          this.props.onSubmitSuccess();
         } else window.alert(res.message || "Server error!");
       })
       .catch((err) => window.alert("Network error!"));
@@ -329,20 +348,23 @@ class MyAlertModal extends Component {
                       .then((res) => {
                         console.log(res);
                         this.setState({
-                          invalidMessage: res.code === 0 ? "ok" : res.message,
+                          triggerExprInvalidMessage: res.code === 0 ? "ok" : res.message,
                         });
                       });
                   } else
                     this.setState({
-                      invalidMessage: "不能为空",
+                      triggerExprInvalidMessage: "不能为空",
                     });
                 }}
                 required
-                valid={this.state.invalidMessage === "ok"}
-                invalid={this.state.invalidMessage !== "ok"}
+                valid={this.state.triggerExprInvalidMessage === "ok"}
+                invalid={
+                  !!this.state.triggerExprInvalidMessage &&
+                  this.state.triggerExprInvalidMessage !== "ok"
+                }
               />
               <FormFeedback>
-                {this.state.invalidMessage || "不能为空"}
+                {this.state.triggerExprInvalidMessage || "不能为空"}
               </FormFeedback>
               <FormText>
                 <span>
