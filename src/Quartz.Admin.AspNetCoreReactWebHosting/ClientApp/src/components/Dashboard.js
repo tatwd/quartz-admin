@@ -204,7 +204,7 @@ const initSetting = () => ({
   jobName: "",
   jobGroup: "",
   jobDesc: "",
-  triggerType: "",
+  triggerType: 0,
   triggerExpr: "",
   httpApiUrl: "",
   httpMethod: "GET",
@@ -306,7 +306,7 @@ class MyAlertModal extends Component {
                 placeholder="Trigger Type"
                 name="triggerType"
                 type="select"
-                value={this.state.setting.triggerType || 0}
+                value={this.state.setting.triggerType}
                 onChange={this.toggleChange}
                 required
               >
