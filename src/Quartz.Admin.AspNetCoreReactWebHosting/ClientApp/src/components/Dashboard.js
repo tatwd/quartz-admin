@@ -171,7 +171,7 @@ class JobsTable extends Component {
                   <td>{item.jobGroup}</td>
                   <td>{item.jobDesc}</td>
                   <td>{item.state}</td>
-                  <td style={{minWidth: '200px'}}>
+                  <td style={{ minWidth: "200px" }}>
                     <Button
                       size="sm"
                       color="link"
@@ -348,7 +348,8 @@ class MyAlertModal extends Component {
                       .then((res) => {
                         console.log(res);
                         this.setState({
-                          triggerExprInvalidMessage: res.code === 0 ? "ok" : res.message,
+                          triggerExprInvalidMessage:
+                            res.code === 0 ? "ok" : res.message,
                         });
                       });
                   } else

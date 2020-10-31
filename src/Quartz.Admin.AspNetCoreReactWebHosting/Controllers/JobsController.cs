@@ -58,9 +58,9 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
                 jobs.Add(new
                 {
                     jobKey = key.Name,
-                    jobGroup = key.Group,
-                    jobDesc = jobDetail.Description,
-                    triggers
+                        jobGroup = key.Group,
+                        jobDesc = jobDetail.Description,
+                        triggers
                 });
             }
             return Ok(jobs);
@@ -105,7 +105,7 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
             if (id.HasValue)
             {
                 var setting = await _jobStoreContext.JobSettings.FindAsync(id.Value);
-                return Ok(new {code = 0, message = "ok", detail = setting});
+                return Ok(new { code = 0, message = "ok", detail = setting });
             }
 
             var take = limit ?? 10;
@@ -117,7 +117,7 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
                 .Skip(skip)
                 .Take(take)
                 .ToList();
-            return Ok(new {code = 0, message = "ok", detail = settings});
+            return Ok(new { code = 0, message = "ok", detail = settings });
         }
 
         [HttpPost("settings")]
@@ -130,7 +130,7 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
                 newJobSetting = await _jobStoreContext.JobSettings.FindAsync(dto.Id.Value);
                 if (newJobSetting == null)
                 {
-                    return BadRequest(new {code = 1404, message = "Cannot update, not found job setting"});
+                    return BadRequest(new { code = 1404, message = "Cannot update, not found job setting" });
                 }
                 dto.UpdateJobSetting(newJobSetting);
                 _jobStoreContext.Update(newJobSetting);
@@ -148,14 +148,14 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
         public async Task<IActionResult> DeleteJobSetting([FromBody] int[] ids)
         {
             var settings = _jobStoreContext.JobSettings
-                    .Where(i => ids.Contains(i.Id));
+                .Where(i => ids.Contains(i.Id));
             foreach (var setting in settings)
             {
                 setting.State = -1; // make to delete state
             }
             _jobStoreContext.JobSettings.UpdateRange(settings);
             await _jobStoreContext.SaveChangesAsync();
-            return Ok(new {code = 0, message = "ok"});
+            return Ok(new { code = 0, message = "ok" });
         }
 
         [HttpGet("validexpr")]
@@ -196,7 +196,7 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
                 return false;
             }
 
-            var values = expr.Split(new[] {'|'}, StringSplitOptions.RemoveEmptyEntries);
+            var values = expr.Split(new [] { '|' }, StringSplitOptions.RemoveEmptyEntries);
             if (values.Length != 3)
             {
                 message = "Must contain 3 parts, split by '|'";
