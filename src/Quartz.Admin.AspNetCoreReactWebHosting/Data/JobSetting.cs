@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Quartz.Admin.AspNetCoreReactWebHosting.Data
 {
@@ -18,7 +19,10 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Data
         public string JobDesc { get; set; }
 
         [Required]
-        public int TriggerType { get; set; }
+        public string TriggerType { get; set; }
+
+        [Required]
+        public string StartupType { get; set; }
 
         [Required]
         public string TriggerExpr { get; set; }
@@ -33,7 +37,7 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Data
         public string HttpBody { get; set; }
 
         [Required]
-        public int State { get; set; }
+        public string State { get; set; }
 
         [Required]
         public DateTime CreateTime { get; set; }

@@ -32,6 +32,8 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting
                 // suggest using EF Migrations
                 context.Database.EnsureCreated();
                 // can data seed here
+
+                // StartupJobsAsync(context).GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
@@ -39,6 +41,15 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting
                 logger.LogError(ex, "An error occurred creating the DB.");
             }
         }
+
+        // private static Task StartupJobsAsync(JobStoreContext jobStoreContext)
+        // {
+        //     var autoJobs = jobStoreContext.JobSettings.Where(i => i.StartupType == JobStartupType.Auto);
+        //
+        //     // TODO: start auto jobs
+        //
+        //     return Task.CompletedTask;
+        // }
 
         private static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args).ConfigureWebHostDefaults(webBuilder =>

@@ -36,7 +36,7 @@ export class NavMenu extends Component {
           className="navbar-expand-sm navbar-toggleable-sm ng-white border-bottom box-shadow mb-3"
           light
         >
-          <Container>
+          <Container fluid={this.props.fluid}>
             <NavbarBrand tag={Link} to="/">
               Quartz.Admin.AspNetCoreReactWebHosting
             </NavbarBrand>

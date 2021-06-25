@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Quartz.Admin.AspNetCoreReactWebHosting.Data;
 using Quartz.Admin.AspNetCoreReactWebHosting.Models;
 using Quartz.Impl.AdoJobStore;
@@ -26,18 +27,18 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
             _jobStoreContext = jobStoreContext;
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> Get(string id)
-        {
-            var scheduler = await _schedulerFactory.GetScheduler();
-            var jobDetail = JobBuilder.Create<HttpSendJob>()
-                .WithIdentity(id, SchedulerConstants.DefaultGroup)
-                .WithDescription("testing")
-                .StoreDurably()
-                .Build();
-            await scheduler.AddJob(jobDetail, true, CancellationToken.None);
-            return Ok(new { code = 0, message = "ok" });
-        }
+        // [HttpGet("{id}")]
+        // public async Task<IActionResult> Get(string id)
+        // {
+        //     var scheduler = await _schedulerFactory.GetScheduler();
+        //     var jobDetail = JobBuilder.Create<HttpSendJob>()
+        //         .WithIdentity(id, SchedulerConstants.DefaultGroup)
+        //         .WithDescription("testing")
+        //         .StoreDurably()
+        //         .Build();
+        //     await scheduler.AddJob(jobDetail, true, CancellationToken.None);
+        //     return Ok(new { code = 0, message = "ok" });
+        // }
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
@@ -112,7 +113,7 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
             var skip = ((page ?? 1) - 1) * take;
 
             var settings = _jobStoreContext.JobSettings
-                .Where(s => s.State > -1)
+                .Where(s => s.State != JobState.Deleted)
                 .OrderByDescending(s => s.CreateTime)
                 .Skip(skip)
                 .Take(take)
@@ -121,13 +122,15 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
         }
 
         [HttpPost("settings")]
-        public async Task<IActionResult> CreateOrUpdateJobSetting(JobSettingCreateOrUpdateDto dto,
-            CancellationToken cancellationToken = default)
+        public async Task<IActionResult> CreateOrUpdateJobSetting([FromBody][Required]JobSettingCreateOrUpdateDto dto,
+            CancellationToken cancellationToken)
         {
             JobSetting newJobSetting;
             if (dto.Id.HasValue)
             {
-                newJobSetting = await _jobStoreContext.JobSettings.FindAsync(dto.Id.Value);
+                newJobSetting =
+                    await _jobStoreContext.JobSettings.FirstOrDefaultAsync(i => i.Id == dto.Id.Value,
+                        cancellationToken);
                 if (newJobSetting == null)
                 {
                     return BadRequest(new { code = 1404, message = "Cannot update, not found job setting" });
@@ -151,7 +154,7 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
                 .Where(i => ids.Contains(i.Id));
             foreach (var setting in settings)
             {
-                setting.State = -1; // make to delete state
+                setting.State = JobState.Deleted; // make to delete state
             }
             _jobStoreContext.JobSettings.UpdateRange(settings);
             await _jobStoreContext.SaveChangesAsync();

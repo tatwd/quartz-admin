@@ -172,14 +172,14 @@ class JobsTable extends Component {
                   <td>{item.jobDesc}</td>
                   <td>{item.state}</td>
                   <td style={{ minWidth: "200px" }}>
-                    <Button
-                      size="sm"
-                      color="link"
-                      className="mb-2 mb-md-0"
-                      onClick={() => {}}
-                    >
-                      Logs
-                    </Button>{" "}
+                    {/*<Button*/}
+                    {/*  size="sm"*/}
+                    {/*  color="link"*/}
+                    {/*  className="mb-2 mb-md-0"*/}
+                    {/*  onClick={() => {}}*/}
+                    {/*>*/}
+                    {/*  Logs*/}
+                    {/*</Button>{" "}*/}
                     <Button
                       size="sm"
                       color="primary"
@@ -222,12 +222,13 @@ const initSetting = () => ({
   jobName: "",
   jobGroup: "",
   jobDesc: "",
-  triggerType: 0,
+  triggerType: "Simple",
   triggerExpr: "",
   httpApiUrl: "",
   httpMethod: "GET",
   httpContentType: "application/x-www-form-urlencoded",
   httpBody: "",
+  startupType: "Auto"
   // TODO: others properties
 });
 
@@ -268,7 +269,7 @@ class MyAlertModal extends Component {
   handleSubmit = (event) => {
     console.log(event);
     var newSetting = this.state.setting;
-    newSetting.triggerType = parseInt(newSetting.triggerType);
+    // newSetting.triggerType = parseInt(newSetting.triggerType);
     fetch("api/jobs/settings", {
       method: "POST",
       body: JSON.stringify(this.state.setting),
@@ -291,7 +292,7 @@ class MyAlertModal extends Component {
         <ModalHeader>Setting</ModalHeader>
         <ModalBody>
           <Form>
-            <p>任务设置</p>
+            {/*<p>任务设置</p>*/}
             <FormGroup>
               <Input
                 placeholder="Job name"
@@ -329,8 +330,8 @@ class MyAlertModal extends Component {
                 onChange={this.toggleChange}
                 required
               >
-                <option value={0}>Simple Trigger</option>
-                <option value={1}>Cron Trigger</option>
+                <option value={"Simple"}>Simple Trigger</option>
+                <option value={"Corn"}>Cron Trigger</option>
               </Input>
             </FormGroup>
             <FormGroup>

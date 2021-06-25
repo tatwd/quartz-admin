@@ -21,7 +21,10 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Models
         public string JobDesc { get; set; }
 
         [Required]
-        public int TriggerType { get; set; }
+        public string TriggerType { get; set; }
+
+        [Required]
+        public string StartupType { get; set; }
 
         [Required]
         public string TriggerExpr { get; set; }
@@ -44,11 +47,12 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Models
                 JobDesc = JobDesc,
                 TriggerType = TriggerType,
                 TriggerExpr = TriggerExpr,
+                StartupType = JobStartupType.Auto,
                 HttpApiUrl = HttpApiUrl,
                 HttpMethod = HttpMethod,
                 HttpContentType = HttpContentType,
                 HttpBody = HttpBody,
-                State = 0, // init state
+                State = JobState.Disable, // init state
                 CreateTime = DateTime.Now
             };
         }
@@ -59,6 +63,7 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Models
             jobSetting.JobGroup = JobGroup;
             jobSetting.JobDesc = JobDesc;
             jobSetting.TriggerType = TriggerType;
+            jobSetting.StartupType = StartupType;
             jobSetting.TriggerExpr = TriggerExpr;
             jobSetting.HttpApiUrl = HttpApiUrl;
             jobSetting.HttpMethod = HttpMethod;
