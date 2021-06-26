@@ -1,4 +1,4 @@
-import React, { Component, useRef } from "react";
+import React, { Component, useRef, useState } from "react";
 import {
   Button,
   Form,
@@ -17,6 +17,7 @@ import {
 export function Dashboard() {
   const modalRef = useRef(null);
   const jobsTableRef = useRef(null);
+  const [hiddenButtons, setHiddenButtons] = useState(true);
 
   const handleEdit = (item) => {
     modalRef.current.setState({
@@ -54,7 +55,8 @@ export function Dashboard() {
     }
   };
 
-  const handleModalSubmitSuccess = () => {
+  const refetchData = () => {
+    jobsTableRef.current.state.selectedAll = false;
     jobsTableRef.current.fetchData();
   };
 
@@ -63,11 +65,29 @@ export function Dashboard() {
       <Button color="info" onClick={() => modalRef.current.toggleShow()}>
         New Job
       </Button>{" "}
-      <Button color="danger" onClick={handleDelete}>
-        Delete Job(s)
-      </Button>
-      <JobsTable ref={jobsTableRef} onEdit={handleEdit} />
-      <MyAlertModal ref={modalRef} onSubmitSuccess={handleModalSubmitSuccess} />
+      <Button onClick={() => refetchData()}>Refresh</Button>{" "}
+      {hiddenButtons ? (
+        <></>
+      ) : (
+        <>
+          <Button color="success">Start</Button>{" "}
+          <Button color="warning">Stop</Button>{" "}
+          <Button color="danger" onClick={handleDelete}>
+            Delete
+          </Button>
+        </>
+      )}
+      <JobsTable
+        ref={jobsTableRef}
+        onEdit={handleEdit}
+        onSelect={(selected, jobs) => {
+          console.log(jobs.map((i) => i.selected));
+          const hasSelectedItem = jobs.some((i) => i.selected);
+          console.log(hasSelectedItem);
+          setHiddenButtons(!hasSelectedItem);
+        }}
+      />
+      <MyAlertModal ref={modalRef} onSubmitSuccess={() => refetchData()} />
     </div>
   );
 }
@@ -112,7 +132,7 @@ class JobsTable extends Component {
           <Table striped responsive>
             <thead>
               <tr>
-                <th className="">
+                <th>
                   <FormGroup check>
                     <Label check>
                       <Input
@@ -130,6 +150,7 @@ class JobsTable extends Component {
                               return i;
                             }),
                           });
+                          this.props.onSelect(checked, jobs);
                         }}
                       />
                       All
@@ -139,6 +160,7 @@ class JobsTable extends Component {
                 <th>Job Name</th>
                 <th>Job Group</th>
                 <th>Job Description</th>
+                <th>Startup Type</th>
                 <th>State</th>
                 <th>Actions</th>
               </tr>
@@ -146,7 +168,7 @@ class JobsTable extends Component {
             <tbody>
               {jobs.map((item, idx) => (
                 <tr key={idx}>
-                  <th scope="row">
+                  <th scope="row" style={{ minWidth: "15px" }}>
                     <FormGroup check>
                       <Label check>
                         <Input
@@ -161,15 +183,35 @@ class JobsTable extends Component {
                             this.setState({ jobs: newJobs });
                             if (selectedAll)
                               this.setState({ selectedAll: false });
+                            this.props.onSelect(checked, jobs);
                           }}
                         />
                         #{item.id}
                       </Label>
                     </FormGroup>
                   </th>
-                  <td>{item.jobName}</td>
-                  <td>{item.jobGroup}</td>
-                  <td>{item.jobDesc}</td>
+                  <td
+                    style={{
+                      minWidth: "100px",
+                      maxWidth: "300px",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {item.jobName}
+                  </td>
+                  <td
+                    style={{
+                      minWidth: "100px",
+                      maxWidth: "200px",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {item.jobGroup}
+                  </td>
+                  <td style={{ minWidth: "100px", wordBreak: "break-word" }}>
+                    {item.jobDesc}
+                  </td>
+                  <td>{item.startupType}</td>
                   <td>{item.state}</td>
                   <td style={{ minWidth: "200px" }}>
                     {/*<Button*/}
@@ -190,19 +232,19 @@ class JobsTable extends Component {
                     </Button>{" "}
                     <Button
                       size="sm"
-                      color="warning"
-                      className="mb-2 mb-md-0"
-                      onClick={() => {}}
-                    >
-                      Stop
-                    </Button>{" "}
-                    <Button
-                      size="sm"
                       color="success"
                       className="mb-2 mb-md-0"
                       onClick={() => {}}
                     >
                       Start
+                    </Button>{" "}
+                    <Button
+                      size="sm"
+                      color="warning"
+                      className="mb-2 mb-md-0"
+                      onClick={() => {}}
+                    >
+                      Stop
                     </Button>
                   </td>
                 </tr>
@@ -228,7 +270,7 @@ const initSetting = () => ({
   httpMethod: "GET",
   httpContentType: "application/x-www-form-urlencoded",
   httpBody: "",
-  startupType: "Auto"
+  startupType: "Auto",
   // TODO: others properties
 });
 
@@ -268,7 +310,7 @@ class MyAlertModal extends Component {
 
   handleSubmit = (event) => {
     console.log(event);
-    var newSetting = this.state.setting;
+    // var newSetting = this.state.setting;
     // newSetting.triggerType = parseInt(newSetting.triggerType);
     fetch("api/jobs/settings", {
       method: "POST",
@@ -320,6 +362,19 @@ class MyAlertModal extends Component {
                 onChange={this.toggleChange}
                 required
               />
+            </FormGroup>
+            <FormGroup>
+              <Input
+                placeholder="Startup Type"
+                name="startupType"
+                type="select"
+                value={this.state.setting.startupType}
+                onChange={this.toggleChange}
+                required
+              >
+                <option value={"Auto"}>Auto</option>
+                <option value={"Manual"}>Manual</option>
+              </Input>
             </FormGroup>
             <FormGroup>
               <Input

@@ -36,7 +36,11 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting
                 q.UseSimpleTypeLoader();
 
                 // job store
-                q.UseInMemoryStore();
+                // q.UseInMemoryStore();
+                // q.UsePersistentStore(c =>
+                // {
+                //     c.UseSQLite(Configuration.GetConnectionString("MyJobStore"));
+                // });
             });
 
             services.AddQuartzServer(c =>
