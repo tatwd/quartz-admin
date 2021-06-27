@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 
 namespace Quartz.Admin.AspNetCoreReactWebHosting
 {
-    [DisallowConcurrentExecution]
     public class HttpSendJob : IJob
     {
         public Task Execute(IJobExecutionContext context)
