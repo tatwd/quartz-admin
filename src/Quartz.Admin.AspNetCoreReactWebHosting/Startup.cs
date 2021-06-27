@@ -32,6 +32,8 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting
 
             services.AddQuartz(q =>
             {
+                q.UseMicrosoftDependencyInjectionJobFactory();
+
                 // required
                 q.UseSimpleTypeLoader();
 
@@ -62,6 +64,11 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting
 
             // In production, the React files will be served from this directory
             services.AddSpaStaticFiles(configuration => { configuration.RootPath = "ClientApp/build"; });
+
+            services.AddHttpClient();
+
+            services.AddTransient<HttpSendJob>();
+            services.AddTransient<CoreService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

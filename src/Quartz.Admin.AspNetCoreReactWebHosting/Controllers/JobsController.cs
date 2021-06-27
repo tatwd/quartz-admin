@@ -19,33 +19,35 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
     {
         private readonly ISchedulerFactory _schedulerFactory;
         private readonly JobStoreContext _jobStoreContext;
+        private readonly CoreService _coreService;
 
         public JobsController(ISchedulerFactory schedulerFactory,
-            JobStoreContext jobStoreContext)
+            JobStoreContext jobStoreContext,
+            CoreService coreService)
         {
             _schedulerFactory = schedulerFactory;
             _jobStoreContext = jobStoreContext;
+            _coreService = coreService;
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> Get(string id)
-        {
-            var scheduler = await _schedulerFactory.GetScheduler();
-            var jobDetail = JobBuilder.Create<HttpSendJob>()
-                .WithIdentity(id, SchedulerConstants.DefaultGroup)
-                .WithDescription("testing")
-                .StoreDurably()
-                .Build();
-            await scheduler.AddJob(jobDetail, true, CancellationToken.None);
-            return Ok(new { code = 0, message = "ok" });
-        }
+        // [HttpGet("{id}")]
+        // public async Task<IActionResult> Get(string id)
+        // {
+        //     var scheduler = await _schedulerFactory.GetScheduler();
+        //     var jobDetail = JobBuilder.Create<HttpSendJob>()
+        //         .WithIdentity(id, SchedulerConstants.DefaultGroup)
+        //         .WithDescription("testing")
+        //         .StoreDurably()
+        //         .Build();
+        //     await scheduler.AddJob(jobDetail, true, CancellationToken.None);
+        //     return Ok(new { code = 0, message = "ok" });
+        // }
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
             var scheduler = await _schedulerFactory.GetScheduler();
-            var jobKeys = await scheduler.GetJobKeys(GroupMatcher<JobKey>
-                .GroupEquals(SchedulerConstants.DefaultGroup));
+            var jobKeys = await scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup());
             // var triggerKeys =
             //     await scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals(SchedulerConstants.DefaultGroup));
 
@@ -55,48 +57,60 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
                 var jobDetail = await scheduler.GetJobDetail(key);
                 if (jobDetail == null) continue;
                 var triggers = (await scheduler.GetTriggersOfJob(key))
-                    .Select(trigger => trigger.StartTimeUtc);
+                    .Select(trigger => new
+                    {
+                        triggerKey = trigger.Key.ToString(),
+                        startTimeUtc = trigger.StartTimeUtc,
+                        prevFireTimeUtc = trigger.GetPreviousFireTimeUtc(),
+                        nextFireTimeUtc = trigger.GetNextFireTimeUtc()
+                    });
                 jobs.Add(new
                 {
-                    jobKey = key.Name,
-                        jobGroup = key.Group,
-                        jobDesc = jobDetail.Description,
-                        triggers
+                    jobName = key.Name,
+                    jobGroup = key.Group,
+                    jobDesc = jobDetail.Description,
+                    triggers
                 });
             }
             return Ok(jobs);
         }
 
-        [HttpGet("{id}/triggers")]
-        public async Task<IActionResult> GetTriggers(string id)
+        [HttpGet("{jobId}/triggers")]
+        public async Task<IActionResult> GetTriggers([Required]int jobId, CancellationToken cancellationToken)
         {
-            var scheduler = await _schedulerFactory.GetScheduler();
-            var jobKey = new JobKey(id, SchedulerConstants.DefaultGroup);
-            var triggers = await scheduler.GetTriggersOfJob(jobKey);
-            return Ok(triggers.Select(i => i.StartTimeUtc));
+            var jobSetting =
+                await _jobStoreContext.JobSettings.FirstOrDefaultAsync(i => i.Id == jobId,
+                    cancellationToken);
+            if (jobSetting == null)
+            {
+                return Ok(new {code = 1, message = $"Not found job setting by id {jobId.ToString()}"});
+            }
+            var scheduler = await _schedulerFactory.GetScheduler(cancellationToken);
+            var jobKey = new JobKey($"{jobSetting.Id.ToString()}_{jobSetting.JobName}", jobSetting.JobName);
+            var triggers = await scheduler.GetTriggersOfJob(jobKey, cancellationToken);
+            var result = triggers.Select(i => new
+            {
+                triggerKey = i.Key.ToString(),
+                startTimeUtc = i.StartTimeUtc,
+                prevFireTimeUtc = i.GetPreviousFireTimeUtc(),
+                nextFireTimeUtc = i.GetNextFireTimeUtc(),
+            });
+            return Ok(result);
         }
 
-        [HttpGet("{id}/triggers/{triggerId}")]
-        public async Task<IActionResult> CreateTrigger(string id, string triggerId,
-            DateTime? startAt, int interval = 5, int repeatCount = 0)
+        [HttpPost("{jobId}/triggers")]
+        public async Task<IActionResult> CreateTrigger([Required] int jobId, CancellationToken cancellationToken)
         {
-            var jobKey = new JobKey(id, SchedulerConstants.DefaultGroup);
-            var scheduler = await _schedulerFactory.GetScheduler();
-            if (startAt.HasValue)
+            var jobSetting =
+                await _jobStoreContext.JobSettings.FirstOrDefaultAsync(i => i.Id == jobId,
+                    cancellationToken);
+            if (jobSetting == null)
             {
-                var trigger = TriggerBuilder.Create()
-                    .ForJob(jobKey)
-                    .WithIdentity(triggerId, SchedulerConstants.DefaultGroup)
-                    .WithDescription("testing trigger")
-                    .StartAt(startAt.Value)
-                    .WithSimpleSchedule(x => x
-                        .WithInterval(TimeSpan.FromSeconds(interval))
-                        .WithRepeatCount(repeatCount))
-                    .Build();
-                await scheduler.ScheduleJob(trigger, CancellationToken.None);
-                return Ok(new { code = 0, message = "ok" });
+                return Ok(new {code = 1, message = $"Not found job setting by id {jobId.ToString()}"});
             }
-            return Ok(new { code = 1, message = "no trigger create" });
+
+            await _coreService.CreateJobTrigger(jobSetting, cancellationToken);
+            return Ok(new { code = 0, message = "ok" });
         }
 
         [HttpGet("settings")]
@@ -162,7 +176,7 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
         }
 
         [HttpGet("validexpr")]
-        public IActionResult ValidExpr(string expr, int type)
+        public IActionResult ValidExpr(string expr, string type)
         {
             if (string.IsNullOrEmpty(expr))
                 return BadRequest(new { code = 1400, message = "不能为空" });
@@ -170,7 +184,7 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
             string msg;
             bool isValid;
 
-            if (type == 0)
+            if (type == JobTriggerType.Simple)
             {
                 isValid = IsValidSimpleExpr(expr, out msg);
             }

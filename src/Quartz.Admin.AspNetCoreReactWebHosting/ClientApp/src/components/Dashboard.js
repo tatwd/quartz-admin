@@ -122,6 +122,20 @@ class JobsTable extends Component {
       .finally(() => this.setState({ loading: false }));
   };
 
+  createJobTrigger = (jobId) => {
+    fetch(`api/jobs/${jobId}/triggers`, {
+      method: "POST",
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        console.log(res);
+        if (res.code === 0) {
+          setTimeout(() => this.fetchData(), 500);
+        } else window.alert(res.message || "Server error!");
+      })
+      .catch((err) => alert("Network error!"));
+  };
+
   render() {
     const { loading, jobs, selectedAll } = this.state;
     return (
@@ -234,7 +248,7 @@ class JobsTable extends Component {
                       size="sm"
                       color="success"
                       className="mb-2 mb-md-0"
-                      onClick={() => {}}
+                      onClick={() => this.createJobTrigger(item.id)}
                     >
                       Start
                     </Button>{" "}
