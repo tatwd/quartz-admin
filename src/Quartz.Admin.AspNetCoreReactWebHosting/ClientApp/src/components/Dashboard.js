@@ -12,12 +12,16 @@ import {
   ModalFooter,
   ModalHeader,
   Table,
+  CustomInput,
+  Spinner,
 } from "reactstrap";
 
 export function Dashboard() {
   const modalRef = useRef(null);
   const jobsTableRef = useRef(null);
   const [hiddenButtons, setHiddenButtons] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [autoRefreshTaskId, setAutoRefreshTaskId] = useState(0);
 
   const handleEdit = (item) => {
     modalRef.current.setState({
@@ -60,6 +64,19 @@ export function Dashboard() {
     jobsTableRef.current.fetchData();
   };
 
+  const startAutoRefreshData = () => {
+    const taskId = setInterval(() => {
+      jobsTableRef.current.fetchData();
+    }, 2 * 1000);
+    setAutoRefreshTaskId(taskId);
+  };
+
+  const stopAutoRefreshData = () => {
+    if (!autoRefreshTaskId) return;
+    window.clearInterval(autoRefreshTaskId);
+    setAutoRefreshTaskId(0);
+  };
+
   return (
     <div>
       <Button color="info" onClick={() => modalRef.current.toggleShow()}>
@@ -77,6 +94,25 @@ export function Dashboard() {
           </Button>
         </>
       )}
+      <div className="mt-3">
+        <CustomInput
+          type="switch"
+          label="auto refresh"
+          id="auto-refresh"
+          checked={autoRefresh}
+          onChange={(event) => {
+            var checked = !autoRefresh;
+            setAutoRefresh(checked);
+            if (checked) {
+              startAutoRefreshData();
+            } else {
+              stopAutoRefreshData();
+            }
+          }}
+          inline={true}
+        />
+        {autoRefresh ? <Spinner size="sm" color="primary" /> : <></>}
+      </div>
       <JobsTable
         ref={jobsTableRef}
         onEdit={handleEdit}
@@ -111,7 +147,7 @@ class JobsTable extends Component {
     fetch("api/jobs/settings?page=1&limit=10")
       .then((res) => res.json())
       .then((res) => {
-        console.log(res);
+        // console.log(res);
         if (res.code === 0) {
           this.setState({
             jobs: res.detail,

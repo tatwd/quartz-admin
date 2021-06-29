@@ -25,6 +25,10 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddTransient<HttpSendJob>();
+            services.AddTransient<CoreService>();
+
+            // default is ServiceLifetime.Scoped
             services.AddDbContext<JobStoreContext>(options =>
             {
                 options.UseSqlite(Configuration.GetConnectionString("MyJobStore"));
@@ -32,7 +36,8 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting
 
             services.AddQuartz(q =>
             {
-                q.UseMicrosoftDependencyInjectionJobFactory();
+                // q.UseMicrosoftDependencyInjectionJobFactory();
+                q.UseMicrosoftDependencyInjectionScopedJobFactory();
 
                 // required
                 q.UseSimpleTypeLoader();
@@ -67,8 +72,7 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting
 
             services.AddHttpClient();
 
-            services.AddTransient<HttpSendJob>();
-            services.AddTransient<CoreService>();
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

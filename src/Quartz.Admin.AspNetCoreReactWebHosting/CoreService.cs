@@ -1,28 +1,33 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Transactions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Quartz.Admin.AspNetCoreReactWebHosting.Data;
 
 namespace Quartz.Admin.AspNetCoreReactWebHosting
 {
-    public class CoreService
+    public class CoreService : IDisposable
     {
         private readonly ISchedulerFactory _schedulerFactory;
         private readonly ILogger<CoreService> _logger;
+        private readonly JobStoreContext _jobStoreContext;
 
         public CoreService(ISchedulerFactory schedulerFactory,
-            ILogger<CoreService> logger)
+            ILogger<CoreService> logger,
+            JobStoreContext jobStoreContext)
         {
             _schedulerFactory = schedulerFactory;
             _logger = logger;
+            _jobStoreContext = jobStoreContext;
         }
-
 
         public async Task<IJobDetail> GetOrAddHttpSendJobAsync(JobSetting jobSetting, CancellationToken cancellationToken)
         {
             var jobIdStr = jobSetting.Id.ToString();
-            var jobKey = new JobKey($"{jobIdStr}_{jobSetting.JobName}", jobSetting.JobGroup);
+            var jobKey = jobSetting.GetQuartzJobKey();
+            var jobDesc = $"{jobSetting.JobGroup}_{jobSetting.JobName}:{jobSetting.JobDesc}";
 
             var scheduler = await _schedulerFactory.GetScheduler(cancellationToken);
             var jobDetail = await scheduler.GetJobDetail(jobKey, cancellationToken);
@@ -31,14 +36,19 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting
                 return jobDetail;
             }
 
+            jobSetting.State = JobState.Started;
+            _jobStoreContext.JobSettings.Update(jobSetting);
+            await _jobStoreContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+
             jobDetail = JobBuilder.Create<HttpSendJob>()
                 .WithIdentity(jobKey)
-                .WithDescription(jobSetting.JobDesc)
+                .WithDescription(jobDesc)
                 .StoreDurably()
-                .UsingJobData("jobId", jobIdStr)
+                .UsingJobData(Constants.JobSettingIdName, jobIdStr)
                 .Build();
 
-            await scheduler.AddJob(jobDetail, true, cancellationToken);
+            await scheduler.AddJob(jobDetail, true, cancellationToken).ConfigureAwait(false);
             return jobDetail;
         }
 
@@ -108,6 +118,10 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting
             return trigger;
         }
 
-
+        public void Dispose()
+        {
+            _logger.LogDebug("Disposed CoreService!");
+            _jobStoreContext?.Dispose();
+        }
     }
 }

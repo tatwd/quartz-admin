@@ -30,19 +30,6 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
             _coreService = coreService;
         }
 
-        // [HttpGet("{id}")]
-        // public async Task<IActionResult> Get(string id)
-        // {
-        //     var scheduler = await _schedulerFactory.GetScheduler();
-        //     var jobDetail = JobBuilder.Create<HttpSendJob>()
-        //         .WithIdentity(id, SchedulerConstants.DefaultGroup)
-        //         .WithDescription("testing")
-        //         .StoreDurably()
-        //         .Build();
-        //     await scheduler.AddJob(jobDetail, true, CancellationToken.None);
-        //     return Ok(new { code = 0, message = "ok" });
-        // }
-
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -114,8 +101,7 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
         }
 
         [HttpGet("settings")]
-        public async Task<IActionResult> GetJobSettings(int? id,
-            int? page, int? limit)
+        public async Task<IActionResult> GetJobSettings(int? id,  int? page, int? limit)
         {
             if (id.HasValue)
             {

@@ -41,5 +41,14 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Data
 
         [Required]
         public DateTime CreateTime { get; set; }
+
+
+        public JobKey GetQuartzJobKey()
+        {
+            var jobIdStr = Id.ToString();
+            var jobKey = new JobKey($"{jobIdStr}", Constants.DefaultGroupName);
+            return jobKey;
+        }
+
     }
 }
