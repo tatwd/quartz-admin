@@ -73,7 +73,7 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
                 return Ok(new {code = 1, message = $"Not found job setting by id {jobId.ToString()}"});
             }
             var scheduler = await _schedulerFactory.GetScheduler(cancellationToken);
-            var jobKey = new JobKey($"{jobSetting.Id.ToString()}_{jobSetting.JobName}", jobSetting.JobName);
+            var jobKey = jobSetting.GetQuartzJobKey();
             var triggers = await scheduler.GetTriggersOfJob(jobKey, cancellationToken);
             var result = triggers.Select(i => new
             {
@@ -148,17 +148,26 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
         }
 
         [HttpPost("settings/delete")]
-        public async Task<IActionResult> DeleteJobSetting([FromBody] int[] ids)
+        public async Task<IActionResult> DeleteJobSetting([FromBody] int[] ids,
+            CancellationToken cancellationToken)
         {
             var settings = _jobStoreContext.JobSettings
                 .Where(i => ids.Contains(i.Id));
+            var jobKeys = new List<JobKey>();
             foreach (var setting in settings)
             {
                 setting.State = JobState.Deleted; // make to delete state
+                jobKeys.Add(setting.GetQuartzJobKey());
             }
-            _jobStoreContext.JobSettings.UpdateRange(settings);
-            await _jobStoreContext.SaveChangesAsync();
-            return Ok(new { code = 0, message = "ok" });
+            var scheduler = await _schedulerFactory.GetScheduler(cancellationToken);
+            var isOk = await scheduler.DeleteJobs(jobKeys, cancellationToken);
+            if (isOk)
+            {
+                _jobStoreContext.JobSettings.UpdateRange(settings);
+                await _jobStoreContext.SaveChangesAsync(cancellationToken);
+                return Ok(new { code = 0, message = "ok" });
+            }
+            return Ok(new { code = 1, message = "Delete Quartz Jobs fail!" });
         }
 
         [HttpGet("validexpr")]

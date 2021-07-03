@@ -99,7 +99,7 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting
             //     });
             // });
 
-            app.UseHttpsRedirection();
+            // app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseSpaStaticFiles();
 
