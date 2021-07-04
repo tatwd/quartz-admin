@@ -30,37 +30,37 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
             _coreService = coreService;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            var scheduler = await _schedulerFactory.GetScheduler();
-            var jobKeys = await scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup());
-            // var triggerKeys =
-            //     await scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals(SchedulerConstants.DefaultGroup));
-
-            var jobs = new List<object>();
-            foreach (var key in jobKeys)
-            {
-                var jobDetail = await scheduler.GetJobDetail(key);
-                if (jobDetail == null) continue;
-                var triggers = (await scheduler.GetTriggersOfJob(key))
-                    .Select(trigger => new
-                    {
-                        triggerKey = trigger.Key.ToString(),
-                        startTimeUtc = trigger.StartTimeUtc,
-                        prevFireTimeUtc = trigger.GetPreviousFireTimeUtc(),
-                        nextFireTimeUtc = trigger.GetNextFireTimeUtc()
-                    });
-                jobs.Add(new
-                {
-                    jobName = key.Name,
-                    jobGroup = key.Group,
-                    jobDesc = jobDetail.Description,
-                    triggers
-                });
-            }
-            return Ok(jobs);
-        }
+        // [HttpGet]
+        // public async Task<IActionResult> GetAll()
+        // {
+        //     var scheduler = await _schedulerFactory.GetScheduler();
+        //     var jobKeys = await scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup());
+        //     // var triggerKeys =
+        //     //     await scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals(SchedulerConstants.DefaultGroup));
+        //
+        //     var jobs = new List<object>();
+        //     foreach (var key in jobKeys)
+        //     {
+        //         var jobDetail = await scheduler.GetJobDetail(key);
+        //         if (jobDetail == null) continue;
+        //         var triggers = (await scheduler.GetTriggersOfJob(key))
+        //             .Select(trigger => new
+        //             {
+        //                 triggerKey = trigger.Key.ToString(),
+        //                 startTimeUtc = trigger.StartTimeUtc,
+        //                 prevFireTimeUtc = trigger.GetPreviousFireTimeUtc(),
+        //                 nextFireTimeUtc = trigger.GetNextFireTimeUtc()
+        //             });
+        //         jobs.Add(new
+        //         {
+        //             jobName = key.Name,
+        //             jobGroup = key.Group,
+        //             jobDesc = jobDetail.Description,
+        //             triggers
+        //         });
+        //     }
+        //     return Ok(jobs);
+        // }
 
         [HttpGet("{jobId}/triggers")]
         public async Task<IActionResult> GetTriggers([Required]int jobId, CancellationToken cancellationToken)
@@ -75,13 +75,18 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
             var scheduler = await _schedulerFactory.GetScheduler(cancellationToken);
             var jobKey = jobSetting.GetQuartzJobKey();
             var triggers = await scheduler.GetTriggersOfJob(jobKey, cancellationToken);
-            var result = triggers.Select(i => new
+
+            var result = new List<TriggerInfoDto>();
+            foreach (var trigger in triggers)
             {
-                triggerKey = i.Key.ToString(),
-                startTimeUtc = i.StartTimeUtc,
-                prevFireTimeUtc = i.GetPreviousFireTimeUtc(),
-                nextFireTimeUtc = i.GetNextFireTimeUtc(),
-            });
+                var state = await scheduler.GetTriggerState(trigger.Key, cancellationToken);
+                var item = new TriggerInfoDto(trigger)
+                {
+                    TriggerState = state.ToString()
+                };
+                result.Add(item);
+            }
+
             return Ok(result);
         }
 
@@ -98,6 +103,54 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
 
             await _coreService.CreateJobTrigger(jobSetting, cancellationToken);
             return Ok(new { code = 0, message = "ok" });
+        }
+
+        [HttpPost("pause")]
+        public async Task<IActionResult> PauseJobs([FromBody] int[] jobSettingIds,
+            CancellationToken cancellationToken)
+        {
+            var scheduler = await _schedulerFactory.GetScheduler(cancellationToken);
+            var settings = _jobStoreContext.JobSettings
+                .Where(i => jobSettingIds.Contains(i.Id));
+            foreach (var setting in settings)
+            {
+                if (setting.State == JobState.Paused)
+                    continue;
+
+                setting.State = JobState.Paused; // make to delete state
+                var jobKey = setting.GetQuartzJobKey();
+
+                await scheduler.PauseJob(jobKey, cancellationToken);
+                _jobStoreContext.JobSettings.UpdateRange(settings);
+            }
+            await _jobStoreContext.SaveChangesAsync(cancellationToken);
+            return Ok(new { code = 0, message = "ok" });
+        }
+
+        [HttpPost("delete")]
+        public async Task<IActionResult> DeleteJobs([FromBody] int[] jobSettingIds,
+            CancellationToken cancellationToken)
+        {
+            var settings = _jobStoreContext.JobSettings
+                .Where(i => jobSettingIds.Contains(i.Id));
+            var jobKeys = new List<JobKey>();
+            foreach (var setting in settings)
+            {
+                if (setting.State == JobState.Deleted)
+                    continue;
+
+                setting.State = JobState.Deleted; // make to delete state
+                jobKeys.Add(setting.GetQuartzJobKey());
+            }
+            var scheduler = await _schedulerFactory.GetScheduler(cancellationToken);
+            var isOk = await scheduler.DeleteJobs(jobKeys, cancellationToken);
+            if (isOk)
+            {
+                _jobStoreContext.JobSettings.UpdateRange(settings);
+                await _jobStoreContext.SaveChangesAsync(cancellationToken);
+                return Ok(new { code = 0, message = "ok" });
+            }
+            return Ok(new { code = 1, message = "Delete Quartz Jobs fail!" });
         }
 
         [HttpGet("settings")]
@@ -145,29 +198,6 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting.Controllers
             }
             await _jobStoreContext.SaveChangesAsync(cancellationToken);
             return Ok(new { code = 0, message = "ok" });
-        }
-
-        [HttpPost("settings/delete")]
-        public async Task<IActionResult> DeleteJobSetting([FromBody] int[] ids,
-            CancellationToken cancellationToken)
-        {
-            var settings = _jobStoreContext.JobSettings
-                .Where(i => ids.Contains(i.Id));
-            var jobKeys = new List<JobKey>();
-            foreach (var setting in settings)
-            {
-                setting.State = JobState.Deleted; // make to delete state
-                jobKeys.Add(setting.GetQuartzJobKey());
-            }
-            var scheduler = await _schedulerFactory.GetScheduler(cancellationToken);
-            var isOk = await scheduler.DeleteJobs(jobKeys, cancellationToken);
-            if (isOk)
-            {
-                _jobStoreContext.JobSettings.UpdateRange(settings);
-                await _jobStoreContext.SaveChangesAsync(cancellationToken);
-                return Ok(new { code = 0, message = "ok" });
-            }
-            return Ok(new { code = 1, message = "Delete Quartz Jobs fail!" });
         }
 
         [HttpGet("validexpr")]

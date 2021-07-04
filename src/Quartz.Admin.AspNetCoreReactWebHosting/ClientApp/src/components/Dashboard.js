@@ -30,7 +30,38 @@ export function Dashboard() {
     modalRef.current.toggleShow();
   };
 
-  const handleDelete = () => {
+  const handleBatchStart = () => {
+  }
+
+  const handleBatchPause = () => {
+    // get selected items
+    const selectedIds = jobsTableRef.current.state.jobs
+      .filter((i) => i.selected)
+      .map((i) => i.id);
+    console.log(selectedIds);
+    if (!selectedIds.length)
+      return window.alert("Please select job(s) that you want to pause!");
+    if (!window.confirm("Sure to pause these jobs?")) {
+      return
+    }
+    fetch("api/jobs/pause", {
+      method: "POST",
+      body: JSON.stringify(selectedIds),
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        console.log(res);
+        if (res.code === 0) {
+          jobsTableRef.current.fetchData();
+        } else window.alert("Server error!");
+      })
+      .catch((err) => window.alert("Network error!"));
+  }
+
+  const handleBatchDelete = () => {
     // get selected items
     const selectedIds = jobsTableRef.current.state.jobs
       .filter((i) => i.selected)
@@ -40,23 +71,25 @@ export function Dashboard() {
     if (!selectedIds.length)
       return window.alert("Please select job(s) that you want to delete!");
 
-    if (window.confirm("Sure to delete these jobs?")) {
-      fetch("api/jobs/settings/delete", {
-        method: "POST",
-        body: JSON.stringify(selectedIds),
-        headers: {
-          "Content-Type": "application/json; charset=utf-8",
-        },
-      })
-        .then((res) => res.json())
-        .then((res) => {
-          console.log(res);
-          if (res.code === 0) {
-            jobsTableRef.current.fetchData();
-          } else window.alert("Server error!");
-        })
-        .catch((err) => window.alert("Network error!"));
+    if (!window.confirm("Sure to delete these jobs?")) {
+      return
     }
+    fetch("api/jobs/delete", {
+      method: "POST",
+      body: JSON.stringify(selectedIds),
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        console.log(res);
+        if (res.code === 0) {
+          jobsTableRef.current.fetchData();
+        } else window.alert("Server error!");
+      })
+      .catch((err) => window.alert("Network error!"));
+
   };
 
   const refetchData = () => {
@@ -87,9 +120,9 @@ export function Dashboard() {
         <></>
       ) : (
         <>
-          <Button color="success">Start</Button>{" "}
-          <Button color="warning">Stop</Button>{" "}
-          <Button color="danger" onClick={handleDelete}>
+          <Button color="success" onClick={handleBatchStart}>Start</Button>{" "}
+          <Button color="warning" onClick={handleBatchPause}>Pause</Button>{" "}
+          <Button color="danger" onClick={handleBatchDelete}>
             Delete
           </Button>
         </>
@@ -294,7 +327,7 @@ class JobsTable extends Component {
                       className="mb-2 mb-md-0"
                       onClick={() => {}}
                     >
-                      Stop
+                      Pause
                     </Button>
                   </td>
                 </tr>

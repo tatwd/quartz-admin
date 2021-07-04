@@ -36,11 +36,6 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting
                 return jobDetail;
             }
 
-            jobSetting.State = JobState.Started;
-            _jobStoreContext.JobSettings.Update(jobSetting);
-            await _jobStoreContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-
             jobDetail = JobBuilder.Create<HttpSendJob>()
                 .WithIdentity(jobKey)
                 .WithDescription(jobDesc)
@@ -58,6 +53,7 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting
             var jobDetail = await GetOrAddHttpSendJobAsync(jobSetting, cancellationToken);
             ITrigger trigger;
 
+
             if (jobSetting.TriggerType == JobTriggerType.Simple)
             {
                 trigger = CreateSimpleTrigger(jobDetail, jobSetting.TriggerExpr);
@@ -70,6 +66,10 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting
             {
                 throw new ArgumentException("Unknown value of `TriggerType`", nameof(jobSetting.TriggerType));
             }
+
+            jobSetting.State = JobState.Started;
+            _jobStoreContext.JobSettings.Update(jobSetting);
+            await _jobStoreContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             if (await scheduler.CheckExists(trigger.Key, cancellationToken))
             {
