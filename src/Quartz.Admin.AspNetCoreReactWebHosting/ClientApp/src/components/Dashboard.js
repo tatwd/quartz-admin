@@ -30,8 +30,7 @@ export function Dashboard() {
     modalRef.current.toggleShow();
   };
 
-  const handleBatchStart = () => {
-  }
+  const handleBatchStart = () => {};
 
   const handleBatchPause = () => {
     // get selected items
@@ -42,24 +41,10 @@ export function Dashboard() {
     if (!selectedIds.length)
       return window.alert("Please select job(s) that you want to pause!");
     if (!window.confirm("Sure to pause these jobs?")) {
-      return
+      return;
     }
-    fetch("api/jobs/pause", {
-      method: "POST",
-      body: JSON.stringify(selectedIds),
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-      },
-    })
-      .then((res) => res.json())
-      .then((res) => {
-        console.log(res);
-        if (res.code === 0) {
-          jobsTableRef.current.fetchData();
-        } else window.alert("Server error!");
-      })
-      .catch((err) => window.alert("Network error!"));
-  }
+    jobsTableRef.current.pauseJobs(selectedIds);
+  };
 
   const handleBatchDelete = () => {
     // get selected items
@@ -72,7 +57,7 @@ export function Dashboard() {
       return window.alert("Please select job(s) that you want to delete!");
 
     if (!window.confirm("Sure to delete these jobs?")) {
-      return
+      return;
     }
     fetch("api/jobs/delete", {
       method: "POST",
@@ -89,7 +74,6 @@ export function Dashboard() {
         } else window.alert("Server error!");
       })
       .catch((err) => window.alert("Network error!"));
-
   };
 
   const refetchData = () => {
@@ -120,8 +104,12 @@ export function Dashboard() {
         <></>
       ) : (
         <>
-          <Button color="success" onClick={handleBatchStart}>Start</Button>{" "}
-          <Button color="warning" onClick={handleBatchPause}>Pause</Button>{" "}
+          <Button color="success" onClick={handleBatchStart}>
+            Start
+          </Button>{" "}
+          <Button color="warning" onClick={handleBatchPause}>
+            Pause
+          </Button>{" "}
           <Button color="danger" onClick={handleBatchDelete}>
             Delete
           </Button>
@@ -203,6 +191,24 @@ class JobsTable extends Component {
         } else window.alert(res.message || "Server error!");
       })
       .catch((err) => alert("Network error!"));
+  };
+
+  pauseJobs = (jobIds) => {
+    fetch("api/jobs/pause", {
+      method: "POST",
+      body: JSON.stringify(jobIds),
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        console.log(res);
+        if (res.code === 0) {
+          setTimeout(() => this.fetchData(), 500);
+        } else window.alert("Server error!");
+      })
+      .catch((err) => window.alert("Network error!"));
   };
 
   render() {
@@ -325,7 +331,7 @@ class JobsTable extends Component {
                       size="sm"
                       color="warning"
                       className="mb-2 mb-md-0"
-                      onClick={() => {}}
+                      onClick={() => this.pauseJobs([item.id])}
                     >
                       Pause
                     </Button>
