@@ -1,4 +1,10 @@
-import React, { Component, useRef, useState } from "react";
+import React, {
+  Component,
+  forwardRef,
+  useRef,
+  useState,
+  useImperativeHandle,
+} from "react";
 import {
   Button,
   Form,
@@ -24,10 +30,8 @@ export function Dashboard() {
   const [autoRefreshTaskId, setAutoRefreshTaskId] = useState(0);
 
   const handleEdit = (item) => {
-    modalRef.current.setState({
-      setting: item,
-    });
-    modalRef.current.toggleShow();
+    // modalRef.current.setSetting(item);
+    modalRef.current.toggleShow(item);
   };
 
   const handleBatchStart = () => {};
@@ -348,233 +352,218 @@ class JobsTable extends Component {
   }
 }
 
-const initSetting = () => ({
-  id: undefined,
-  jobName: "",
-  jobGroup: "",
-  jobDesc: "",
-  triggerType: "Simple",
-  triggerExpr: "",
-  httpApiUrl: "",
-  httpMethod: "GET",
-  httpContentType: "application/x-www-form-urlencoded",
-  httpBody: "",
-  startupType: "Auto",
-  // TODO: others properties
-});
+const MyAlertModal = forwardRef((props, ref) => {
+  const [show, setShow] = useState(false);
 
-class MyAlertModal extends Component {
-  constructor(props, ref) {
-    super(props);
-
-    this.state = {
-      show: false,
-      setting: initSetting(),
-      triggerExprInvalidMessage: "",
-    };
-  }
-
-  toggleShow = () => {
-    if (this.state.show) {
-      this.setState({
-        setting: initSetting(),
-      });
-    }
-    this.setState({
-      show: !this.state.show,
-    });
+  const initSetting = {
+    id: undefined,
+    jobName: "",
+    jobGroup: "",
+    jobDesc: "",
+    triggerType: "Simple",
+    triggerExpr: "",
+    httpApiUrl: "",
+    httpMethod: "GET",
+    httpContentType: "application/x-www-form-urlencoded",
+    httpBody: "",
+    startupType: "Auto",
+    // TODO: others properties
   };
+  const [setting, setSetting] = useState(initSetting);
+  const [triggerExprInvalidMessage, setTriggerExprInvalidMessage] =
+    useState("");
 
-  toggleChange = (event) => {
+  const toggleChange = (event) => {
+    console.log(event);
     const target = event.target;
     const value = target.type === "checkbox" ? target.checked : target.value;
     const name = target.name;
 
-    const newSetting = this.state.setting;
-    newSetting[name] = value;
-    this.setState({
-      setting: newSetting,
-    });
+    setting[name] = value;
+    setSetting({ ...setting });
   };
 
-  handleSubmit = (event) => {
-    console.log(event);
-    // var newSetting = this.state.setting;
-    // newSetting.triggerType = parseInt(newSetting.triggerType);
+  const handleSubmit = (event) => {
     fetch("api/jobs/settings", {
       method: "POST",
-      body: JSON.stringify(this.state.setting),
+      body: JSON.stringify(setting),
       headers: { "Content-Type": "application/json" },
     })
       .then((res) => res.json())
       .then((res) => {
         console.log(res);
         if (res.code === 0) {
-          this.toggleShow();
-          this.props.onSubmitSuccess();
+          setShow(false);
+          props.onSubmitSuccess();
         } else window.alert(res.message || "Server error!");
       })
       .catch((err) => window.alert("Network error!"));
   };
 
-  render() {
-    return (
-      <Modal isOpen={this.state.show} toggle={this.toggleShow}>
-        <ModalHeader>Setting</ModalHeader>
-        <ModalBody>
-          <Form>
-            {/*<p>任务设置</p>*/}
-            <FormGroup>
-              <Input
-                placeholder="Job name"
-                name="jobName"
-                value={this.state.setting.jobName}
-                onChange={this.toggleChange}
-                required
-              />
-            </FormGroup>
-            <FormGroup>
-              <Input
-                placeholder="Job Group"
-                name="jobGroup"
-                value={this.state.setting.jobGroup}
-                onChange={this.toggleChange}
-                required
-              />
-            </FormGroup>
-            <FormGroup>
-              <Input
-                type="textarea"
-                placeholder="Job Description"
-                name="jobDesc"
-                value={this.state.setting.jobDesc}
-                onChange={this.toggleChange}
-                required
-              />
-            </FormGroup>
-            <FormGroup>
-              <Input
-                placeholder="Startup Type"
-                name="startupType"
-                type="select"
-                value={this.state.setting.startupType}
-                onChange={this.toggleChange}
-                required
-              >
-                <option value={"Auto"}>Auto</option>
-                <option value={"Manual"}>Manual</option>
-              </Input>
-            </FormGroup>
-            <FormGroup>
-              <Input
-                placeholder="Trigger Type"
-                name="triggerType"
-                type="select"
-                value={this.state.setting.triggerType}
-                onChange={this.toggleChange}
-                required
-              >
-                <option value={"Simple"}>Simple Trigger</option>
-                <option value={"Corn"}>Cron Trigger</option>
-              </Input>
-            </FormGroup>
-            <FormGroup>
-              <Input
-                placeholder="Trigger Expression"
-                name="triggerExpr"
-                value={this.state.setting.triggerExpr || ""}
-                onChange={this.toggleChange}
-                onBlur={(event) => {
-                  const expr = event.target.value;
-                  const type = this.state.setting.triggerType;
-                  if (expr) {
-                    fetch(`api/jobs/validexpr?expr=${expr}&type=${type}`)
-                      .then((res) => res.json())
-                      .then((res) => {
-                        console.log(res);
-                        this.setState({
-                          triggerExprInvalidMessage:
-                            res.code === 0 ? "ok" : res.message,
-                        });
-                      });
-                  } else
-                    this.setState({
-                      triggerExprInvalidMessage: "不能为空",
+  useImperativeHandle(
+    ref,
+    // out a object for parent component
+    () => ({
+      toggleShow: (editItem) => {
+        setSetting(editItem || initSetting);
+        setShow(true);
+      },
+    }),
+    [initSetting]
+  );
+
+  return (
+    <Modal isOpen={show} toggle={() => setShow(!show)}>
+      <ModalHeader>Setting</ModalHeader>
+      <ModalBody>
+        <Form>
+          {/*<p>任务设置</p>*/}
+          <FormGroup>
+            <Input
+              placeholder="Job name"
+              name="jobName"
+              value={setting.jobName}
+              onChange={toggleChange}
+              required
+            />
+          </FormGroup>
+          <FormGroup>
+            <Input
+              placeholder="Job Group"
+              name="jobGroup"
+              value={setting.jobGroup}
+              onChange={toggleChange}
+              required
+            />
+          </FormGroup>
+          <FormGroup>
+            <Input
+              type="textarea"
+              placeholder="Job Description"
+              name="jobDesc"
+              value={setting.jobDesc}
+              onChange={toggleChange}
+              required
+            />
+          </FormGroup>
+          <FormGroup>
+            <Input
+              placeholder="Startup Type"
+              name="startupType"
+              type="select"
+              value={setting.startupType}
+              onChange={toggleChange}
+              required
+            >
+              <option value={"Auto"}>Auto</option>
+              <option value={"Manual"}>Manual</option>
+            </Input>
+          </FormGroup>
+          <FormGroup>
+            <Input
+              placeholder="Trigger Type"
+              name="triggerType"
+              type="select"
+              value={setting.triggerType}
+              onChange={toggleChange}
+              required
+            >
+              <option value={"Simple"}>Simple Trigger</option>
+              <option value={"Corn"}>Cron Trigger</option>
+            </Input>
+          </FormGroup>
+          <FormGroup>
+            <Input
+              placeholder="Trigger Expression"
+              name="triggerExpr"
+              value={setting.triggerExpr || ""}
+              onChange={toggleChange}
+              onBlur={(event) => {
+                const expr = event.target.value;
+                const type = setting.triggerType;
+                if (expr) {
+                  fetch(`api/jobs/validexpr?expr=${expr}&type=${type}`)
+                    .then((res) => res.json())
+                    .then((res) => {
+                      console.log(res);
+                      setTriggerExprInvalidMessage(
+                        res.code === 0 ? "ok" : res.message
+                      );
                     });
-                }}
-                required
-                valid={this.state.triggerExprInvalidMessage === "ok"}
-                invalid={
-                  !!this.state.triggerExprInvalidMessage &&
-                  this.state.triggerExprInvalidMessage !== "ok"
-                }
-              />
-              <FormFeedback>
-                {this.state.triggerExprInvalidMessage || "不能为空"}
-              </FormFeedback>
-              <FormText>
-                <span>
-                  1. 选择<code>Simple Trigger</code>取值必须形如
-                  <code>启动时间点|间隔秒数|重复数</code>。举例，
-                  <code>2020-09-01 02:00|5|2</code>表示将在2020-09-01
-                  02:00启动任务并间隔5s重复2次（共3次执行）。
-                </span>
-                <br />
-                <span>
-                  2. 选择<code>Cron Trigger</code>取值必须使用 Cron 表达式。
-                </span>
-              </FormText>
-            </FormGroup>
-            <p>接口设置</p>
-            <FormGroup>
-              <Input
-                type="textarea"
-                placeholder="HTTP API URL"
-                name="httpApiUrl"
-                value={this.state.setting.httpApiUrl}
-                onChange={this.toggleChange}
-                required
-              />
-            </FormGroup>
-            <FormGroup>
-              <Input
-                type="select"
-                placeholder="HTTP Method"
-                name="httpMethod"
-                value={this.state.setting.httpMethod}
-                onChange={this.toggleChange}
-                required
-              >
-                <option>GET</option>
-                <option>POST</option>
-              </Input>
-            </FormGroup>
-            <FormGroup>
-              <Input
-                placeholder="HTTP Content Type"
-                name="httpContentType"
-                value={this.state.setting.httpContentType || ""}
-                onChange={this.toggleChange}
-              />
-            </FormGroup>
-            <FormGroup>
-              <Input
-                type="textarea"
-                placeholder="HTTP Body"
-                name="httpBody"
-                value={this.state.setting.httpBody || ""}
-                onChange={this.toggleChange}
-              />
-            </FormGroup>
-          </Form>
-        </ModalBody>
-        <ModalFooter>
-          <Button onClick={this.handleSubmit} color="primary">
-            Submit
-          </Button>
-          <Button onClick={this.toggleShow}>Cancel</Button>
-        </ModalFooter>
-      </Modal>
-    );
-  }
-}
+                } else setTriggerExprInvalidMessage("不能为空");
+              }}
+              required
+              valid={triggerExprInvalidMessage === "ok"}
+              invalid={
+                !!triggerExprInvalidMessage &&
+                triggerExprInvalidMessage !== "ok"
+              }
+            />
+            <FormFeedback>
+              {triggerExprInvalidMessage || "不能为空"}
+            </FormFeedback>
+            <FormText>
+              <span>
+                1. 选择<code>Simple Trigger</code>取值必须形如
+                <code>启动时间点|间隔秒数|重复数</code>。举例，
+                <code>2020-09-01 02:00|5|2</code>表示将在2020-09-01
+                02:00启动任务并间隔5s重复2次（共3次执行）。
+              </span>
+              <br />
+              <span>
+                2. 选择<code>Cron Trigger</code>取值必须使用 Cron 表达式。
+              </span>
+            </FormText>
+          </FormGroup>
+          <p>接口设置</p>
+          <FormGroup>
+            <Input
+              type="textarea"
+              placeholder="HTTP API URL"
+              name="httpApiUrl"
+              value={setting.httpApiUrl}
+              onChange={toggleChange}
+              required
+            />
+          </FormGroup>
+          <FormGroup>
+            <Input
+              type="select"
+              placeholder="HTTP Method"
+              name="httpMethod"
+              value={setting.httpMethod}
+              onChange={toggleChange}
+              required
+            >
+              <option>GET</option>
+              <option>POST</option>
+            </Input>
+          </FormGroup>
+          <FormGroup>
+            <Input
+              placeholder="HTTP Content Type"
+              name="httpContentType"
+              value={setting.httpContentType || ""}
+              onChange={toggleChange}
+            />
+          </FormGroup>
+          <FormGroup>
+            <Input
+              type="textarea"
+              placeholder="HTTP Body"
+              name="httpBody"
+              value={setting.httpBody || ""}
+              onChange={toggleChange}
+            />
+          </FormGroup>
+        </Form>
+      </ModalBody>
+      <ModalFooter>
+        <Button onClick={handleSubmit} color="primary">
+          Submit
+        </Button>
+        <Button onClick={() => setShow(false)}>Cancel</Button>
+      </ModalFooter>
+    </Modal>
+  );
+});
