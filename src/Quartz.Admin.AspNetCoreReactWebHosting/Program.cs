@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NLog.Web;
 using Quartz.Admin.AspNetCoreReactWebHosting.Data;
 
 namespace Quartz.Admin.AspNetCoreReactWebHosting
@@ -15,9 +16,24 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting
     {
         public static void Main(string[] args)
         {
-            var host = CreateHostBuilder(args).Build();
-            CreateDbIfNotExists(host);
-            host.Run();
+            var logger = NLog.Web.NLogBuilder.ConfigureNLog("nlog.config").GetCurrentClassLogger();
+
+            try
+            {
+                logger.Debug("init main");
+                var host = CreateHostBuilder(args).Build();
+                CreateDbIfNotExists(host);
+                host.Run();
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Stopped program because of exception");
+                throw;
+            }
+            finally
+            {
+                NLog.LogManager.Shutdown();
+            }
         }
 
         private static void CreateDbIfNotExists(IHost host)
@@ -52,7 +68,15 @@ namespace Quartz.Admin.AspNetCoreReactWebHosting
         // }
 
         private static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args).ConfigureWebHostDefaults(webBuilder =>
-                webBuilder.UseStartup<Startup>());
+            Host.CreateDefaultBuilder(args)
+                .ConfigureWebHostDefaults(webBuilder =>
+                {
+                    webBuilder.UseStartup<Startup>();
+                })
+                .ConfigureLogging(logging =>
+                {
+                    logging.ClearProviders();
+                })
+                .UseNLog();
     }
 }

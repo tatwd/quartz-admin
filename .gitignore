@@ -4,6 +4,7 @@ bin/
 obj/
 output/
 node_modules/
+logs/
 
 *.db
 *.db-shm

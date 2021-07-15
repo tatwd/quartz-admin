@@ -7,6 +7,7 @@ using Quartz.Admin.AspNetCoreReactWebHosting.Data;
 
 namespace Quartz.Admin.AspNetCoreReactWebHosting
 {
+    [DisallowConcurrentExecution]
     public class HttpSendJob : IJob, IDisposable
     {
         private readonly ILogger<HttpSendJob> _logger;
